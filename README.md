@@ -1,11 +1,11 @@
-### Kamaliia Project
+### CommonPlace
 
 A multiplatform application with a **Kotlin/Ktor** backend and a **React/TypeScript** frontend, using **Firebase Firestore** as the database.
 
 ### Project Structure
 
 ```
-Kamaliia-project/
+CommonPlace/
 ├── src/main/kotlin/org/example/   # Kotlin backend
 │   ├── Application.kt             # Ktor server entry point (port 8080)
 │   ├── firebase/FirebaseService.kt # Firebase initialization
