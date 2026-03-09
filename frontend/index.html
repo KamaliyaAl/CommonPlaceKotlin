@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kamaliia</title>
+  </head>
+  <body>
+    <div id="app">
+      <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; max-width: 960px; margin: 0 auto;">
+        <div id="user-status">Not logged in</div>
+      </header>
+      <nav id="main-nav" style="display: flex; gap: 1rem; padding: 0 1rem; max-width: 960px; margin: 0 auto 1rem auto;">
+        <a href="/">Home</a>
+        <a href="/login" id="login-link">Login</a>
+        <a href="/signup" id="signup-link">Sign Up</a>
+      </nav>
+      <main id="content" style="padding: 1rem; max-width: 960px; margin: 0 auto;"></main>
+    </div>
+    <script type="module" src="/src/pages/home.js"></script>
+  </body>
+</html>
