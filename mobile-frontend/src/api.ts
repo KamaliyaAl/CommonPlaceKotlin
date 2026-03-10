@@ -1,0 +1,61 @@
+const API_URL = 'http://192.168.10.63:8080/api';
+
+export const api = {
+  async getEvents() {
+    const response = await fetch(`${API_URL}/events`);
+    if (!response.ok) throw new Error('Failed to fetch events');
+    const events = await response.json();
+    
+    // Fetch geopositions to get lat/lng
+    const geoResponse = await fetch(`${API_URL}/geopositions`);
+    const geopositions = geoResponse.ok ? await geoResponse.json() : [];
+    const geoMap = new Map(geopositions.map((g: any) => [g.id, g]));
+
+    return events.map((e: any) => {
+      const geo = geoMap.get(e.geopositionId);
+      return {
+        id: e.id,
+        title: e.name || 'No title',
+        description: e.description || '',
+        lat: geo?.latitude || 0,
+        lng: geo?.longitude || 0,
+        category: 'other', // Default as Ktor doesn't have category yet
+        date: e.time || new Date().toISOString().split('T')[0],
+        rating: 4.5,
+        reviewsCount: 0
+      };
+    });
+  },
+
+  async addEvent(event: any) {
+    // 1. Create Geoposition
+    const geoResponse = await fetch(`${API_URL}/geopositions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        latitude: event.lat,
+        longitude: event.lng
+      })
+    });
+    const geo = await geoResponse.json();
+
+    // 2. Create Event
+    const eventResponse = await fetch(`${API_URL}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: event.title,
+        description: event.description,
+        geopositionId: geo.id,
+        time: event.date,
+        organizerId: 'user1' // Dummy for now
+      })
+    });
+    const newEvent = await eventResponse.json();
+    
+    return {
+      ...event,
+      id: newEvent.id
+    };
+  }
+};
