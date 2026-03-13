@@ -29,6 +29,7 @@ Backend (Kotlin + Ktor)
 ▼
 Firebase Firestore
 
+
 ### Backend (Kotlin + Ktor)
 
 The backend is implemented using **Ktor**, a lightweight asynchronous framework for building APIs in Kotlin.
@@ -53,10 +54,10 @@ The frontend provides a **responsive user interface** that allows users to inter
 
 Key UI technologies:
 
-- **React**
-- **TypeScript**
-- **Map-based visualization**
-- **Mobile-first UI design**
+- React
+- TypeScript
+- Map-based visualization
+- Mobile-first UI design
 
 The interface focuses on **event exploration and filtering**, integrating maps, lists, and personalized recommendations.
 
@@ -73,249 +74,43 @@ Firestore was chosen for:
 - Easy integration with mobile applications
 - Flexible document-based structure
 
-The database stores information about:
-
-- Users
-- Events
-- Locations
-- Interests
-- Friend relationships
-- Favorite events and locations
-
 ---
 
 ## Core Features
 
-### 1. Event Discovery
-
-Users can explore events through:
-
-- **Map view**
-- **Event list**
-- **Search functionality**
-- **Date filters**
-
-Events are displayed as markers on the map, allowing users to visually identify nearby activities.
-
----
-
-### 2. Event Filters
-
-Users can refine their event search using filters such as:
-
-- Date
-- Interests
-- Location
-- Categories
-
-Filters allow users to quickly find relevant events happening around them.
-
----
-
-### 3. Favorites
-
-Users can save:
-
-- Favorite events
-- Favorite locations
-
-This allows quick access to preferred activities and places.
-
----
-
-### 4. User Profiles
-
-Each user has a profile containing:
-
-- Name
-- Email
-- Age
-- Gender
-- City
-- Interests
-
-Users can edit their interests and personalize their experience.
-
----
-
-### 5. Interests System
-
-Users can select interests such as:
-
-- Sports
-- Reading
-- Swimming
-- Dancing
-- Running
-
-These interests help personalize event discovery.
-
----
-
-### 6. Social Features
-
-Users can connect with friends within the platform.
-
-The system supports:
-
-- Friend relationships
-- Viewing friends on profiles
-- Event sharing
+- Location-based event discovery
+- Interactive map with event markers
+- Event search and filtering by date and interests
+- Favorite events and locations
+- User profile management
+- User interest selection
+- Friend relationships between users
+- Event preview and navigation routes
+- Event list view
+- Map-based exploration interface
 
 ---
 
 ## Application Screens
 
-The application consists of several main screens:
-
-### Authentication
-
-Users can sign in or sign up using email credentials.
-
-Features:
-
-- Email/password login
-- Google authentication
-- User session management
-
----
-
-### Map View
-
-The **map screen** is the main discovery interface.
-
-Features include:
-
-- Event markers on a map
-- Date selector
-- Filters
-- Event preview cards
-- Route navigation to event locations
-
----
-
-### Event List
-
-Events can also be viewed in a **scrollable list**.
-
-Each event displays:
-
-- Event name
-- Description
-- Rating
-- Map visibility
-- Favorite option
-
----
-
-### User Profile
-
-Users can manage their profile information:
-
-- Profile picture
-- Interests
-- Friend list
-- Personal information
-- Account settings
-
----
-
-### Dashboard
-
-The dashboard provides quick access to:
-
-- Find events
-- My events
+- Authentication (Sign in / Sign up)
+- Dashboard
+- Event discovery (Find events)
+- Event list view
+- Map view with event markers
 - Favorites
-- History
+- Event history
+- User profile
+- Interest editing
+- Friend list
 
 ---
 
 ## Database Design
 
-The database includes several key entities.
+The following diagram illustrates the relational structure used to model users, events, locations, interests, and relationships within the application.
 
-### Users
-
-Stores profile data for each user.
-
-Fields include:
-
-- id
-- name
-- gender
-- email
-
----
-
-### Events
-
-Stores event details.
-
-Fields include:
-
-- id
-- name
-- description
-- geolocation
-- organizer
-- time
-
----
-
-### Locations
-
-Stores event locations.
-
-Fields include:
-
-- id
-- geoposition
-- description
-
----
-
-### Interests
-
-Defines available interests for users.
-
-Fields include:
-
-- id
-- interest_name
-
----
-
-### User Interests
-
-Links users to their interests.
-
-Fields include:
-
-- user_id
-- interest_id
-
----
-
-### Favorites
-
-Users can save events and locations.
-
-Tables include:
-
-- `is_favourite_event`
-- `is_favourite_location`
-
----
-
-### Friend Relationships
-
-Stores connections between users.
-
-Fields include:
-
-- user_id
-- friend_id
+![Database Schema](./database_schema.png)
 
 ---
 
@@ -324,8 +119,9 @@ Fields include:
 Map functionality allows users to:
 
 - View nearby events
-- Navigate to locations
+- Navigate to event locations
 - Filter events by area
+- Open event details directly from map markers
 
 Each event contains **geospatial coordinates** used to render markers on the map.
 
