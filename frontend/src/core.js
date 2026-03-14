@@ -23,6 +23,16 @@ export function initAuth(callback) {
 
   if (user) {
     if (userStatusDiv) userStatusDiv.innerHTML = `Logged in as: <strong>${user.email}</strong>`
+    
+    // Add Users link if it doesn't exist
+    if (mainNav && !document.getElementById('users-link')) {
+      const usersLink = document.createElement('a')
+      usersLink.href = '/users'
+      usersLink.id = 'users-link'
+      usersLink.textContent = 'Users'
+      mainNav.insertBefore(usersLink, loginLink)
+    }
+
     if (loginLink) {
       loginLink.textContent = 'Account'
       loginLink.href = '/profiles'

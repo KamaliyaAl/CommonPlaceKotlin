@@ -57,15 +57,17 @@ fun Route.eventRoutes() {
 
         post {
             val event = call.receive<Event>()
+            val docRef = FirebaseService.firestore.collection(collection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "name" to event.name,
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,
                 "organizerId" to event.organizerId,
                 "time" to event.time
             )
-            val docRef = withLogging("POST event") {
-                FirebaseService.firestore.collection(collection).add(data).get()
+            withLogging("POST event") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, event.copy(id = docRef.id))
         }
@@ -76,6 +78,7 @@ fun Route.eventRoutes() {
             )
             val event = call.receive<Event>()
             val data: Map<String, Any?> = mapOf(
+                "id" to id,
                 "name" to event.name,
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,

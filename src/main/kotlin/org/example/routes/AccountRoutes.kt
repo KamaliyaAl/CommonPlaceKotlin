@@ -29,7 +29,9 @@ fun Route.accountRoutes() {
                 return@post call.respond(HttpStatusCode.Conflict, "Account already exists")
             }
 
+            val docRef = FirebaseService.firestore.collection(collection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "name" to profile.name,
                 "age" to profile.age,
                 "gender" to profile.gender,
@@ -38,8 +40,8 @@ fun Route.accountRoutes() {
                 "isAdmin" to false
             )
 
-            val docRef = withLogging("POST create account") {
-                FirebaseService.firestore.collection(collection).add(data).get()
+            withLogging("POST create account") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, profile.copy(id = docRef.id, isAdmin = false))
         }
@@ -59,6 +61,7 @@ fun Route.accountRoutes() {
             }
 
             val data: Map<String, Any?> = mapOf(
+                "id" to id,
                 "name" to profile.name,
                 "age" to profile.age,
                 "gender" to profile.gender,

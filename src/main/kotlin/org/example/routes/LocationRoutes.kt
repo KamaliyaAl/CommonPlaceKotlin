@@ -55,12 +55,14 @@ fun Route.locationRoutes() {
 
         post {
             val location = call.receive<Location>()
+            val docRef = FirebaseService.firestore.collection(locationsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "geopositionId" to location.geopositionId,
                 "description" to location.description
             )
-            val docRef = withLogging("POST location") {
-                FirebaseService.firestore.collection(locationsCollection).add(data).get()
+            withLogging("POST location") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, location.copy(id = docRef.id))
         }
@@ -71,6 +73,7 @@ fun Route.locationRoutes() {
             )
             val location = call.receive<Location>()
             val data: Map<String, Any?> = mapOf(
+                "id" to id,
                 "geopositionId" to location.geopositionId,
                 "description" to location.description
             )
@@ -131,12 +134,14 @@ fun Route.locationRoutes() {
 
         post {
             val geoposition = call.receive<Geoposition>()
+            val docRef = FirebaseService.firestore.collection(geopositionsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "latitude" to geoposition.latitude,
                 "longitude" to geoposition.longitude
             )
-            val docRef = withLogging("POST geoposition") {
-                FirebaseService.firestore.collection(geopositionsCollection).add(data).get()
+            withLogging("POST geoposition") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, geoposition.copy(id = docRef.id))
         }
@@ -158,6 +163,7 @@ fun Route.locationRoutes() {
                 val documents = FirebaseService.firestore.collection(favouriteLocationsCollection).get().get()
                 documents.map { doc ->
                     FavouriteLocation(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         locationId = doc.getString("locationId") ?: "",
                         favourite = doc.getBoolean("favourite") ?: false
@@ -176,6 +182,7 @@ fun Route.locationRoutes() {
                     .whereEqualTo("userId", userId).get().get()
                 documents.map { doc ->
                     FavouriteLocation(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         locationId = doc.getString("locationId") ?: "",
                         favourite = doc.getBoolean("favourite") ?: false
@@ -187,15 +194,17 @@ fun Route.locationRoutes() {
 
         post {
             val fav = call.receive<FavouriteLocation>()
+            val docRef = FirebaseService.firestore.collection(favouriteLocationsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "userId" to fav.userId,
                 "locationId" to fav.locationId,
                 "favourite" to fav.favourite
             )
             withLogging("POST favourite location") {
-                FirebaseService.firestore.collection(favouriteLocationsCollection).add(data).get()
+                docRef.set(data).get()
             }
-            call.respond(HttpStatusCode.Created, fav)
+            call.respond(HttpStatusCode.Created, fav.copy(id = docRef.id))
         }
 
         delete {

@@ -127,7 +127,9 @@ fun Route.profileRoutes() {
 
         post {
             val profile = call.receive<Profile>()
+            val docRef = FirebaseService.firestore.collection(collection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "name" to profile.name,
                 "age" to profile.age,
                 "gender" to profile.gender,
@@ -135,8 +137,8 @@ fun Route.profileRoutes() {
                 "password" to profile.password,
                 "isAdmin" to profile.isAdmin
             )
-            val docRef = withLogging("POST profile") {
-                FirebaseService.firestore.collection(collection).add(data).get()
+            withLogging("POST profile") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, profile.copy(id = docRef.id))
         }
@@ -146,7 +148,13 @@ fun Route.profileRoutes() {
                 ?: return@put call.respond(HttpStatusCode.BadRequest, "Missing id")
 
             val profile = call.receive<Profile>()
+
+            // Verification of permissions could be added here if we had auth middleware,
+            // but for now we follow the user's logic in the frontend and keep the backend open
+            // as requested by the current project structure.
+            
             val data: Map<String, Any?> = mapOf(
+                "id" to id,
                 "name" to profile.name,
                 "age" to profile.age,
                 "gender" to profile.gender,

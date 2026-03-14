@@ -1,4 +1,4 @@
-const API_URL = 'http://192.168.10.63:8080/api';
+const API_URL = 'http://172.29.65.127:8080/api';
 
 export const api = {
   async getEvents() {
@@ -57,5 +57,17 @@ export const api = {
       ...event,
       id: newEvent.id
     };
+  },
+
+  async getProfiles() {
+    const response = await fetch(`${API_URL}/profiles`);
+    if (!response.ok) throw new Error('Failed to fetch profiles');
+    return await response.json();
+  },
+
+  async getProfile(id: string) {
+    const response = await fetch(`${API_URL}/profiles/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch profile');
+    return await response.json();
   }
 };

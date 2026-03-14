@@ -51,9 +51,13 @@ fun Route.interestRoutes() {
 
         post {
             val interest = call.receive<Interest>()
-            val data: Map<String, Any?> = mapOf("interestName" to interest.interestName)
-            val docRef = withLogging("POST interest") {
-                FirebaseService.firestore.collection(interestsCollection).add(data).get()
+            val docRef = FirebaseService.firestore.collection(interestsCollection).document()
+            val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
+                "interestName" to interest.interestName
+            )
+            withLogging("POST interest") {
+                docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, interest.copy(id = docRef.id))
         }
@@ -63,7 +67,10 @@ fun Route.interestRoutes() {
                 HttpStatusCode.BadRequest, "Missing id"
             )
             val interest = call.receive<Interest>()
-            val data: Map<String, Any?> = mapOf("interestName" to interest.interestName)
+            val data: Map<String, Any?> = mapOf(
+                "id" to id,
+                "interestName" to interest.interestName
+            )
             withLogging("PUT interest $id") {
                 FirebaseService.firestore.collection(interestsCollection).document(id).set(data).get()
             }
@@ -87,6 +94,7 @@ fun Route.interestRoutes() {
                 val documents = FirebaseService.firestore.collection(userInterestsCollection).get().get()
                 documents.map { doc ->
                     UserInterest(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         interestId = doc.getString("interestId") ?: ""
                     )
@@ -104,6 +112,7 @@ fun Route.interestRoutes() {
                     .whereEqualTo("userId", userId).get().get()
                 documents.map { doc ->
                     UserInterest(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         interestId = doc.getString("interestId") ?: ""
                     )
@@ -114,14 +123,16 @@ fun Route.interestRoutes() {
 
         post {
             val userInterest = call.receive<UserInterest>()
+            val docRef = FirebaseService.firestore.collection(userInterestsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "userId" to userInterest.userId,
                 "interestId" to userInterest.interestId
             )
             withLogging("POST user interest") {
-                FirebaseService.firestore.collection(userInterestsCollection).add(data).get()
+                docRef.set(data).get()
             }
-            call.respond(HttpStatusCode.Created, userInterest)
+            call.respond(HttpStatusCode.Created, userInterest.copy(id = docRef.id))
         }
 
         delete {

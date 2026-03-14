@@ -31,6 +31,7 @@ data class Interest(
 
 @Serializable
 data class UserInterest(
+    val id: String = "",
     val userId: String = "",
     val interestId: String = ""
 )
@@ -51,12 +52,14 @@ data class Geoposition(
 
 @Serializable
 data class FriendRelation(
+    val id: String = "",
     val userId: String = "",
     val friendId: String = ""
 )
 
 @Serializable
 data class FavouriteLocation(
+    val id: String = "",
     val userId: String = "",
     val locationId: String = "",
     val favourite: Boolean = false
@@ -64,6 +67,7 @@ data class FavouriteLocation(
 
 @Serializable
 data class FavouriteEvent(
+    val id: String = "",
     val userId: String = "",
     val eventId: String = "",
     val favourite: Boolean = false

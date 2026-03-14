@@ -101,8 +101,13 @@ fun Application.configureRouting() {
                 val fileName = if (path.isEmpty()) "index.html" else "$path.html"
                 val file = File(distDir, fileName)
                 
+                // Special check for paths that might be handled as files but should fallback to their .html version
+                val altFile = if (path.isNotEmpty() && !path.contains(".")) File(distDir, "$path.html") else null
+
                 if (file.exists() && file.isFile) {
                     call.respondFile(file)
+                } else if (altFile != null && altFile.exists() && altFile.isFile) {
+                    call.respondFile(altFile)
                 } else if (!path.contains(".")) {
                     // Fallback to index.html only for clean navigation paths (no dots)
                     val indexFile = File(distDir, "index.html")

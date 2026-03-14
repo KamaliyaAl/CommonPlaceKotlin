@@ -7,13 +7,15 @@ import AddScreen from "../screens/AddScreen";
 import ListStack from "../screens/ListStack";
 import MapScreen from "../screens/MapScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import UsersListScreen from "../screens/UsersListScreen";
 
 export type BottomTabParamList = {
     Add: undefined;
     List: undefined;
     Map: { date?: string } | undefined;
+    Users: undefined;
     Chat: undefined;
-    Profile: undefined;
+    Profile: { userId?: string } | undefined;
 };
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -50,6 +52,9 @@ export default function Tabs() {
                         case "Map":
                             iconName = "map-marker-radius-outline";
                             break;
+                        case "Users":
+                            iconName = "account-group-outline";
+                            break;
                         case "Chat":
                             iconName = "message-outline";
                             break;
@@ -73,6 +78,7 @@ export default function Tabs() {
             <Tab.Screen name="Add" component={AddScreen} />
             <Tab.Screen name="List" component={ListStack} />
             <Tab.Screen name="Map" component={MapScreen} />
+            <Tab.Screen name="Users" component={UsersListScreen} />
             <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>
     );

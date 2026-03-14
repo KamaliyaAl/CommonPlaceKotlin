@@ -13,6 +13,7 @@ export async function renderAdminPanel() {
       <button class="tab-btn" data-tab="interests">Interests</button>
       <button class="tab-btn" data-tab="locations">Locations</button>
       <button class="tab-btn" data-tab="all-tables">All Data (Debug)</button>
+      <a href="/users" style="margin-left: auto; text-decoration: none; padding: 0.25rem 0.75rem; background: #28a745; color: white; border-radius: 4px; font-size: 0.9rem; align-self: center;">Search Users</a>
     </div>
     <div id="tab-content"></div>
 

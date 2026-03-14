@@ -18,6 +18,7 @@ fun Route.friendRoutes() {
                 val documents = FirebaseService.firestore.collection(friendsCollection).get().get()
                 documents.map { doc ->
                     FriendRelation(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         friendId = doc.getString("friendId") ?: ""
                     )
@@ -35,6 +36,7 @@ fun Route.friendRoutes() {
                     .whereEqualTo("userId", userId).get().get()
                 documents.map { doc ->
                     FriendRelation(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         friendId = doc.getString("friendId") ?: ""
                     )
@@ -45,14 +47,16 @@ fun Route.friendRoutes() {
 
         post {
             val relation = call.receive<FriendRelation>()
+            val docRef = FirebaseService.firestore.collection(friendsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "userId" to relation.userId,
                 "friendId" to relation.friendId
             )
             withLogging("POST friend relation") {
-                FirebaseService.firestore.collection(friendsCollection).add(data).get()
+                docRef.set(data).get()
             }
-            call.respond(HttpStatusCode.Created, relation)
+            call.respond(HttpStatusCode.Created, relation.copy(id = docRef.id))
         }
 
         delete {
@@ -78,6 +82,7 @@ fun Route.favouriteEventRoutes() {
                 val documents = FirebaseService.firestore.collection(favouriteEventsCollection).get().get()
                 documents.map { doc ->
                     FavouriteEvent(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         eventId = doc.getString("eventId") ?: "",
                         favourite = doc.getBoolean("favourite") ?: false
@@ -96,6 +101,7 @@ fun Route.favouriteEventRoutes() {
                     .whereEqualTo("userId", userId).get().get()
                 documents.map { doc ->
                     FavouriteEvent(
+                        id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         eventId = doc.getString("eventId") ?: "",
                         favourite = doc.getBoolean("favourite") ?: false
@@ -107,15 +113,17 @@ fun Route.favouriteEventRoutes() {
 
         post {
             val fav = call.receive<FavouriteEvent>()
+            val docRef = FirebaseService.firestore.collection(favouriteEventsCollection).document()
             val data: Map<String, Any?> = mapOf(
+                "id" to docRef.id,
                 "userId" to fav.userId,
                 "eventId" to fav.eventId,
                 "favourite" to fav.favourite
             )
             withLogging("POST favourite event") {
-                FirebaseService.firestore.collection(favouriteEventsCollection).add(data).get()
+                docRef.set(data).get()
             }
-            call.respond(HttpStatusCode.Created, fav)
+            call.respond(HttpStatusCode.Created, fav.copy(id = docRef.id))
         }
 
         delete {

@@ -57,7 +57,8 @@ class ProfileIntegrationTest {
         // 1. Mock POST behavior
         val mockDocRef = mockk<DocumentReference>()
         every { mockDocRef.id } returns "test-id-123"
-        every { mockCollection.add(any()) } returns ApiFutures.immediateFuture(mockDocRef)
+        every { mockCollection.document() } returns mockDocRef
+        every { mockDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
 
         // 2. Mock GET (all) behavior
         val mockQuerySnapshot = mockk<QuerySnapshot>()
@@ -125,7 +126,8 @@ class ProfileIntegrationTest {
         
         val mockDocRef = mockk<DocumentReference>()
         every { mockDocRef.id } returns "new-id"
-        every { mockCollection.add(any()) } returns ApiFutures.immediateFuture(mockDocRef)
+        every { mockCollection.document() } returns mockDocRef
+        every { mockDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
 
         // 1. POST /api/account
         val newProfile = Profile(name = "New User", email = "new@example.com", password = "password")

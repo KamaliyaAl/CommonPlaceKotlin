@@ -16,6 +16,7 @@ export default defineConfig({
         locations: resolve(__dirname, 'locations.html'),
         debug: resolve(__dirname, 'debug.html'),
         admin: resolve(__dirname, 'admin.html'),
+        users: resolve(__dirname, 'users.html'),
       },
     },
   },
