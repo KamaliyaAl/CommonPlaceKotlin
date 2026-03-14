@@ -34,7 +34,7 @@ fun Route.profileRoutes() {
                         id = existingProfile.id,
                         name = existingProfile.getString("name") ?: "",
                         age = existingProfile.getLong("age")?.toInt(),
-                        gender = existingProfile.getBoolean("gender") ?: false,
+                        gender = existingProfile.get("gender")?.toString() ?: "",
                         email = existingProfile.getString("email") ?: "",
                         password = existingPassword,
                         isAdmin = existingProfile.getBoolean("isAdmin") ?: false
@@ -43,6 +43,7 @@ fun Route.profileRoutes() {
                 } else {
                     call.respond(HttpStatusCode.Unauthorized, "Invalid password")
                 }
+
             } else {
                 call.respond(HttpStatusCode.NotFound, "Create a new account before logging in")
             }
@@ -56,7 +57,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.getBoolean("gender") ?: false,
+                        gender = doc.get("gender")?.toString() ?: "",
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -67,9 +68,9 @@ fun Route.profileRoutes() {
         }
 
         get("/by-email") {
-            val email = call.request.queryParameters["email"] ?: return@get call.respond(
-                HttpStatusCode.BadRequest, "Missing email"
-            )
+            val email = call.request.queryParameters["email"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing email")
+
             val profile = withLogging("GET profile by email $email") {
                 val documents = FirebaseService.firestore.collection(collection)
                     .whereEqualTo("email", email).get().get()
@@ -81,7 +82,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.getBoolean("gender") ?: false,
+                        gender = doc.get("gender")?.toString() ?: "",
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -96,11 +97,13 @@ fun Route.profileRoutes() {
         }
 
         get("/{id}") {
-            val id = call.parameters["id"] ?: return@get call.respond(
-                HttpStatusCode.BadRequest, "Missing id"
-            )
+            val id = call.parameters["id"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing id")
+
             val profile = withLogging("GET profile $id") {
-                val doc = FirebaseService.firestore.collection(collection).document(id).get().get()
+                val doc = FirebaseService.firestore.collection(collection)
+                    .document(id).get().get()
+
                 if (!doc.exists()) {
                     null
                 } else {
@@ -108,7 +111,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.getBoolean("gender") ?: false,
+                        gender = doc.get("gender")?.toString() ?: "",
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -139,9 +142,9 @@ fun Route.profileRoutes() {
         }
 
         put("/{id}") {
-            val id = call.parameters["id"] ?: return@put call.respond(
-                HttpStatusCode.BadRequest, "Missing id"
-            )
+            val id = call.parameters["id"]
+                ?: return@put call.respond(HttpStatusCode.BadRequest, "Missing id")
+
             val profile = call.receive<Profile>()
             val data: Map<String, Any?> = mapOf(
                 "name" to profile.name,
@@ -152,17 +155,19 @@ fun Route.profileRoutes() {
                 "isAdmin" to profile.isAdmin
             )
             withLogging("PUT profile $id") {
-                FirebaseService.firestore.collection(collection).document(id).set(data).get()
+                FirebaseService.firestore.collection(collection)
+                    .document(id).set(data).get()
             }
             call.respond(HttpStatusCode.OK, profile.copy(id = id))
         }
 
         delete("/{id}") {
-            val id = call.parameters["id"] ?: return@delete call.respond(
-                HttpStatusCode.BadRequest, "Missing id"
-            )
+            val id = call.parameters["id"]
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Missing id")
+
             withLogging("DELETE profile $id") {
-                FirebaseService.firestore.collection(collection).document(id).delete().get()
+                FirebaseService.firestore.collection(collection)
+                    .document(id).delete().get()
             }
             call.respond(HttpStatusCode.NoContent)
         }

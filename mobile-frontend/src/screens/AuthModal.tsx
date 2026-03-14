@@ -9,11 +9,24 @@ export default function AuthModal({ visible, onClose }: { visible: boolean; onCl
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState<string>("");
 
   async function onPrimary() {
-    if (mode === "signin") await signInEmail(email, password);
-    else await signUpEmail(email, password, name);
-    onClose();
+    try {
+      if (mode === "signin") {
+        await signInEmail(email, password);
+      } else {
+        if (!gender) {
+          alert("Please select gender");
+          return;
+        }
+        await signUpEmail(email, password, name, parseInt(age) || undefined, gender || undefined);
+      }
+      onClose();
+    } catch (err: any) {
+      alert(err.message);
+    }
   }
 
   async function onGoogle() {
@@ -35,7 +48,24 @@ export default function AuthModal({ visible, onClose }: { visible: boolean; onCl
           </View>
 
           {mode === "signup" && (
-            <TextInput value={name} onChangeText={setName} placeholder="Name" style={s.input} />
+            <>
+              <TextInput value={name} onChangeText={setName} placeholder="Name" style={s.input} />
+              <TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="numeric" style={s.input} />
+              <View style={s.genderRow}>
+                <TouchableOpacity 
+                  style={[s.genderBtn, gender === "Female" && s.genderBtnActive]} 
+                  onPress={() => setGender("Female")}
+                >
+                  <Text style={[s.genderText, gender === "Female" && s.genderTextActive]}>Female</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[s.genderBtn, gender === "Male" && s.genderBtnActive]} 
+                  onPress={() => setGender("Male")}
+                >
+                  <Text style={[s.genderText, gender === "Male" && s.genderTextActive]}>Male</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
           <TextInput value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" style={s.input} />
           <TextInput value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry style={s.input} />
@@ -72,4 +102,9 @@ const s = StyleSheet.create({
   googleText: { fontWeight: "800", color: "#111" },
   close: { padding: 12, alignItems: "center", marginTop: 6 },
   closeText: { color: "#555" },
+  genderRow: { flexDirection: "row", gap: 10, marginTop: 10 },
+  genderBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#f2f2f2", alignItems: "center" },
+  genderBtnActive: { backgroundColor: "black" },
+  genderText: { fontWeight: "600", color: "#333" },
+  genderTextActive: { color: "white" },
 });
