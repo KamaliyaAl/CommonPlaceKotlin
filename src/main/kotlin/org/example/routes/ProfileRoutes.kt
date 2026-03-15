@@ -6,6 +6,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.example.firebase.FirebaseService
 import org.example.models.Profile
+import org.example.models.LoginRequest
 import org.example.database.withLogging
 
 fun Route.profileRoutes() {
@@ -13,7 +14,7 @@ fun Route.profileRoutes() {
 
     route("/api/profiles") {
         post("/login") {
-            val loginRequest = call.receive<Profile>()
+            val loginRequest = call.receive<LoginRequest>()
             val email = loginRequest.email
             val password = loginRequest.password
 

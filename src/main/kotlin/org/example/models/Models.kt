@@ -14,6 +14,12 @@ data class Profile(
 )
 
 @Serializable
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+@Serializable
 data class Event(
     val id: String = "",
     val name: String? = null,

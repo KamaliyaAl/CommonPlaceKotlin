@@ -18,6 +18,7 @@ import io.mockk.mockk
 import kotlinx.serialization.json.Json
 import org.example.firebase.FirebaseService
 import org.example.models.Profile
+import org.example.models.LoginRequest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -156,6 +157,47 @@ class ProfileIntegrationTest {
         every { mockGetDocRef.delete() } returns ApiFutures.immediateFuture(null)
         val deleteResponse = client.delete("/api/account/new-id")
         assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+    }
+
+    @Test
+    fun testLogin() = testApplication {
+        FirebaseService.firestore = mockFirestore
+        application {
+            configurePlugins()
+            configureRouting()
+        }
+        val client = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+
+        // 1. Mock GET behavior (email search for login)
+        val mockQuerySnapshot = mockk<QuerySnapshot>()
+        val mockDocSnapshot = mockk<QueryDocumentSnapshot>()
+        
+        every { mockDocSnapshot.id } returns "test-login-id"
+        every { mockDocSnapshot.getString("name") } returns "Admin User"
+        every { mockDocSnapshot.getLong("age") } returns 25L
+        every { mockDocSnapshot.getBoolean("gender") } returns false
+        every { mockDocSnapshot.getString("email") } returns "admin@example.com"
+        every { mockDocSnapshot.getString("password") } returns "admin123"
+        every { mockDocSnapshot.getBoolean("isAdmin") } returns true
+        
+        every { mockQuerySnapshot.isEmpty } returns false
+        every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot)
+        
+        every { mockCollection.whereEqualTo("email", "admin@example.com").get() } returns ApiFutures.immediateFuture(mockQuerySnapshot)
+
+        // 2. Perform LOGIN
+        val loginReq = LoginRequest("admin@example.com", "admin123")
+        val response = client.post("/api/profiles/login") {
+            contentType(ContentType.Application.Json)
+            setBody(loginReq)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val profile = response.body<Profile>()
+        assertEquals("test-login-id", profile.id)
+        assertEquals(true, profile.isAdmin)
     }
 
     @Test
