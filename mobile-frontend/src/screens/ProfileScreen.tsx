@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth, User } from "../auth/AuthContext";
 import AuthModal from "./AuthModal"; // если файл рядом в src/screens
 import EditInterestsModal from "./EditInterestsModal";
+import EditProfileModal from "./EditProfileModal";
 import { api } from "../api";
 
 function Pill({ label }: { label: string }) {
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const [isFriend, setIsFriend] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [editInterestsVisible, setEditInterestsVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
   const isFocused = useIsFocused();
   const [authVisible, setAuthVisible] = useState(false);
 
@@ -190,6 +192,14 @@ export default function ProfileScreen() {
               onAddInterest={handleAddInterest}
               onRemoveInterest={handleRemoveInterest}
             />
+            {currentUser && (
+              <EditProfileModal
+                visible={editProfileVisible}
+                user={currentUser}
+                onClose={() => setEditProfileVisible(false)}
+                onUpdate={updateProfile}
+              />
+            )}
           </>
         )}
 
@@ -217,10 +227,9 @@ export default function ProfileScreen() {
             <Text style={s.line}>Email: {user.email}</Text>
             <Text style={s.line}>Age: {user.age ?? "-"}</Text>
             <Text style={s.line}>Gender: {user.gender === true ? "Female" : user.gender === false ? "Male" : "-"}</Text>
-            <Text style={s.line}>City: {user.city ?? "-"}</Text>
 
             {isMe ? (
-              <TouchableOpacity style={s.editSmall}>
+              <TouchableOpacity style={s.editSmall} onPress={() => setEditProfileVisible(true)}>
                 <Text style={s.editSmallText}>Edit ✎</Text>
               </TouchableOpacity>
             ) : currentUser ? (

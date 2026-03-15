@@ -12,7 +12,6 @@ export type User = {
   photoURL?: string;
   interests?: string[];
   friendsCount?: number;
-  city?: string;
 };
 
 type AuthContextValue = {
@@ -71,8 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: profile.name,
       email: profile.email,
       age: profile.age,
-      gender: profile.gender
-    });
+      gender: profile.gender,
+      password: profile.password
+    } as any);
   };
 
   const signUpEmail = async (email: string, password: string, name: string, age?: number, gender?: boolean) => {
@@ -93,8 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: profile.name,
       email: profile.email,
       age: profile.age,
-      gender: profile.gender
-    });
+      gender: profile.gender,
+      password: profile.password
+    } as any);
   };
 
   const signInGoogle = async () => {
@@ -111,16 +112,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        id: user.uid,
         name: patch.name || user.name,
         email: user.email,
         age: patch.age !== undefined ? patch.age : user.age,
-        gender: patch.gender !== undefined ? patch.gender : user.gender
+        gender: patch.gender !== undefined ? patch.gender : user.gender,
+        password: (user as any).password || "" // Backend might require this
       })
     });
 
     if (response.ok) {
       const next = { ...user, ...patch };
       await persist(next);
+    } else {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to update profile');
     }
   };
 
