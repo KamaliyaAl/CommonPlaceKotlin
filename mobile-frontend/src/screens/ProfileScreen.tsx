@@ -6,6 +6,7 @@ import { useAuth, User } from "../auth/AuthContext";
 import AuthModal from "./AuthModal"; // если файл рядом в src/screens
 import EditInterestsModal from "./EditInterestsModal";
 import { api } from "../api";
+import createPerformanceLogger from "react-native/Libraries/Utilities/createPerformanceLogger";
 
 function Pill({ label }: { label: string }) {
   return (
@@ -24,6 +25,9 @@ export default function ProfileScreen() {
 
   const [targetUser, setTargetUser] = useState<User | null>(null);
   const [fetchingUser, setFetchingUser] = useState(false);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [isFriend, setIsFriend] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
   const [editInterestsVisible, setEditInterestsVisible] = useState(false);
   const isFocused = useIsFocused();
   const [authVisible, setAuthVisible] = useState(false);
@@ -34,7 +38,50 @@ export default function ProfileScreen() {
     } else {
       setTargetUser(null);
     }
+    if (userId || currentUser?.uid) {
+      fetchFriends(userId || currentUser?.uid || "")
+    }
   }, [userId, currentUser]);
+
+  const fetchFriends = async (id: string) => {
+    try {
+      const data = await api.getFriends(id);
+      setFriends(data);
+      if (currentUser && !isMe) {
+        // userId - ID просматриваемого профиля. currentUser.uid - мой ID.
+        // fetchFriends вызывается с userId. Т.е. data - это друзья просматриваемого пользователя.
+        // Если я (currentUser.uid) есть в этом списке, значит мы друзья.
+        setIsFriend(data.some((f: any) => f.id === currentUser.uid));
+      } else if (currentUser && isMe) {
+        // Если это мой профиль, isFriend не нужен для управления кнопкой, но можно сбросить
+        setIsFriend(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch friends:", err);
+    }
+  };
+
+  const handleAddFriend = async () => {
+    if (!currentUser || !userId) return;
+    try {
+      await api.addFriend(currentUser.uid, userId);
+      setIsFriend(true);
+      fetchFriends(userId);
+    } catch (err) {
+      console.error("Failed to add friend:", err);
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    if (!currentUser || !userId) return;
+    try {
+      await api.removeFriend(currentUser.uid, userId);
+      setIsFriend(false);
+      fetchFriends(userId);
+    } catch (err) {
+      console.error("Failed to remove friend:", err);
+    }
+  };
 
   const fetchTargetUser = async (id: string) => {
     setFetchingUser(true);
@@ -143,45 +190,90 @@ export default function ProfileScreen() {
             <Text style={s.line}>Gender: {user.gender === true ? "Male" : user.gender === false ? "Female" : "-"}</Text>
             <Text style={s.line}>City: {user.city ?? "-"}</Text>
 
-            {isMe && (
+            {isMe ? (
               <TouchableOpacity style={s.editSmall}>
                 <Text style={s.editSmallText}>Edit ✎</Text>
               </TouchableOpacity>
-            )}
+            ) : currentUser ? (
+              <TouchableOpacity 
+                style={[s.editSmall, isFriend && { backgroundColor: "#7FA6FF" }]} 
+                onPress={isFriend ? handleRemoveFriend : handleAddFriend}
+              >
+                <Text style={s.editSmallText}>{isFriend ? "Remove friend" : "Add Friend"}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
 
-        <View style={s.midRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.sectionTitle}>Interests:</Text>
+        <View style={s.tabsRow}>
+          <TouchableOpacity 
+            style={[s.tab, !showFriends && s.tabActive]} 
+            onPress={() => setShowFriends(false)}
+          >
+            <Text style={[s.tabText, !showFriends && s.tabTextActive]}>Interests</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[s.tab, showFriends && s.tabActive]} 
+            onPress={() => setShowFriends(true)}
+          >
+            <Text style={[s.tabText, showFriends && s.tabTextActive]}>Friends ({friends.length})</Text>
+          </TouchableOpacity>
+        </View>
 
-            <View style={s.pillsWrap}>
-              {(user.interests ?? []).map((it: string) => (
-                <Pill key={it} label={it} />
-              ))}
-              {(user.interests ?? []).length === 0 && (
-                <Text style={{ color: "#999" }}>No interests yet</Text>
+        {!showFriends ? (
+          <View style={s.midRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.sectionTitle}>Interests:</Text>
+
+              <View style={s.pillsWrap}>
+                {(user.interests ?? []).map((it: string) => (
+                  <Pill key={it} label={it} />
+                ))}
+                {(user.interests ?? []).length === 0 && (
+                  <Text style={{ color: "#999" }}>No interests yet</Text>
+                )}
+              </View>
+
+              {isMe && (
+                <TouchableOpacity style={s.editBig} onPress={() => setEditInterestsVisible(true)}>
+                  <Text style={s.editBigText}>Edit ✎</Text>
+                </TouchableOpacity>
               )}
             </View>
 
-            {isMe && (
-              <TouchableOpacity style={s.editBig} onPress={() => setEditInterestsVisible(true)}>
-                <Text style={s.editBigText}>Edit ✎</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={s.friends}>
-            <Text style={s.sectionTitle}>Friends: {user.friendsCount ?? 0}</Text>
-            <View style={s.circles}>
-              <View style={s.circle} />
-              <View style={[s.circle, { marginLeft: -14 }]} />
-              <View style={[s.circle, { marginLeft: -14, justifyContent: "center", alignItems: "center" }]}>
-                <Text style={{ fontWeight: "700" }}>+10</Text>
+            <View style={s.friends}>
+              <Text style={s.sectionTitle}>Friends: {friends.length}</Text>
+              <View style={s.circles}>
+                <View style={s.circle} />
+                <View style={[s.circle, { marginLeft: -14 }]} />
+                <View style={[s.circle, { marginLeft: -14, justifyContent: "center", alignItems: "center" }]}>
+                  <Text style={{ fontWeight: "700" }}>+{friends.length > 2 ? friends.length - 2 : 0}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        ) : (
+          <View style={s.friendsList}>
+            <Text style={s.sectionTitle}>Friends List:</Text>
+            {friends.length === 0 ? (
+              <Text style={{ color: "#999" }}>No friends yet</Text>
+            ) : (
+              friends.map((f, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={s.friendItem}
+                  onPress={() => navigation.navigate("Profile", { userId: f.id })}
+                >
+                  <View style={s.friendAvatar} />
+                  <View>
+                    <Text style={s.friendName}>{f.name || f.id}</Text>
+                    <Text style={s.friendStatus}>Friend</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
 
         {isMe && (
           <TouchableOpacity style={[s.blackBtn, { marginTop: "auto" }]} onPress={signOut}>
@@ -218,6 +310,16 @@ const s = StyleSheet.create({
   pillText: { color: "white", fontWeight: "700", fontSize: 12 },
   editBig: { marginTop: 16, alignSelf: "flex-start", backgroundColor: "black", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14 },
   editBigText: { color: "white", fontWeight: "800", fontSize: 14 },
+  tabsRow: { flexDirection: "row", marginTop: 20, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  tab: { paddingVertical: 10, paddingHorizontal: 20, marginRight: 10 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: "black" },
+  tabText: { fontSize: 16, color: "#999", fontWeight: "600" },
+  tabTextActive: { color: "black", fontWeight: "700" },
+  friendsList: { marginTop: 20 },
+  friendItem: { flexDirection: "row", alignItems: "center", marginBottom: 15, padding: 10, backgroundColor: "#f9f9f9", borderRadius: 12 },
+  friendAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#ddd", marginRight: 15 },
+  friendName: { fontSize: 16, fontWeight: "700" },
+  friendStatus: { fontSize: 12, color: "#777" },
   friends: { width: 120, alignItems: "flex-start" },
   circles: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   circle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#ddd", borderWidth: 2, borderColor: "#fff" },

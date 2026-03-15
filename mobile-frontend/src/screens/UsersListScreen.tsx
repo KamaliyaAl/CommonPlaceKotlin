@@ -10,20 +10,24 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../api";
+import { useAuth } from "../auth/AuthContext";
 
 export default function UsersListScreen() {
+  const { user } = useAuth();
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<any>();
 
   useEffect(() => {
     loadProfiles();
-  }, []);
+  }, [user]);
 
   const loadProfiles = async () => {
     try {
       const data = await api.getProfiles();
-      setProfiles(data);
+      // Filter out current user and all admins
+      const filtered = data.filter((p: any) => p.id !== user?.uid && !p.isAdmin);
+      setProfiles(filtered);
     } catch (err) {
       console.error("Failed to load profiles:", err);
     } finally {

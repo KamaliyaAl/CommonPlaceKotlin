@@ -41,6 +41,9 @@ async function renderProfileData(currentUser, profile, canEdit) {
     const friends = await friendsApi.getByUser(profile.id)
     const favEvents = await favouriteEventsApi.getByUser(profile.id)
     const favLocations = await favouriteLocationsApi.getByUser(profile.id)
+    // profile.id - целевой профиль. currentUser.id - мой ID.
+    // friends - список друзей целевого профиля. Если я там есть - мы друзья.
+    const isFriend = friends.some(f => f.id === currentUser.id)
 
     let html = `
       <div style="max-width: 800px; margin: 0 auto; padding: 1rem;">
@@ -52,13 +55,17 @@ async function renderProfileData(currentUser, profile, canEdit) {
             <div><strong>Gender:</strong> ${profile.gender ? 'Male' : 'Female'}</div>
             <div><strong>Email:</strong> ${profile.email}</div>
           </div>
-          ${canEdit ? `
           <div style="margin-top: 1.5rem; text-align: right; display: flex; justify-content: flex-end; gap: 1rem;">
-            <button id="edit-account-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px;">Edit Profile</button>
-            <button id="delete-account-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px;">Delete Account</button>
-            <button id="logout-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px;">Logout</button>
+            ${canEdit ? `
+              <button id="edit-account-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px;">Edit Profile</button>
+              <button id="delete-account-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px;">Delete Account</button>
+              <button id="logout-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px;">Logout</button>
+            ` : `
+              <button id="friend-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: ${isFriend ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px;">
+                ${isFriend ? 'Remove friend' : 'Add Friend'}
+              </button>
+            `}
           </div>
-          ` : ''}
         </div>
 
         ${canEdit ? `
@@ -91,7 +98,7 @@ async function renderProfileData(currentUser, profile, canEdit) {
           <section>
             <h3>${canEdit ? 'My ' : ''}Friends (${friends.length})</h3>
             <ul id="user-friends-list">
-              ${friends.length ? friends.map(f => `<li>${f.friendId}</li>`).join('') : '<li>No friends added</li>'}
+              ${friends.length ? friends.map(f => `<li><a href="/profiles?id=${f.id}">${f.name || f.id}</a></li>`).join('') : '<li>No friends added</li>'}
             </ul>
           </section>
 
@@ -162,6 +169,19 @@ async function renderProfileData(currentUser, profile, canEdit) {
           } catch (err) {
             alert('Failed to delete account: ' + err.message)
           }
+        }
+      }
+    } else {
+      document.getElementById('friend-btn').onclick = async () => {
+        try {
+          if (isFriend) {
+            await friendsApi.remove({ userId: currentUser.id, friendId: profile.id })
+          } else {
+            await friendsApi.add({ userId: currentUser.id, friendId: profile.id })
+          }
+          window.location.reload()
+        } catch (err) {
+          alert('Failed to update friendship: ' + err.message)
         }
       }
     }

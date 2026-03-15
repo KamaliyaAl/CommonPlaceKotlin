@@ -69,5 +69,31 @@ export const api = {
     const response = await fetch(`${API_URL}/profiles/${id}`);
     if (!response.ok) throw new Error('Failed to fetch profile');
     return await response.json();
+  },
+
+  async getFriends(userId: string) {
+    const response = await fetch(`${API_URL}/api/friends/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch friends');
+    return await response.json();
+  },
+
+  async addFriend(userId: string, friendId: string) {
+    const response = await fetch(`${API_URL}/api/friends`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, friendId })
+    });
+    if (!response.ok) throw new Error('Failed to add friend');
+    return await response.json();
+  },
+
+  async removeFriend(userId: string, friendId: string) {
+    const response = await fetch(`${API_URL}/api/friends`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, friendId })
+    });
+    if (!response.ok) throw new Error('Failed to remove friend');
+    return true;
   }
 };

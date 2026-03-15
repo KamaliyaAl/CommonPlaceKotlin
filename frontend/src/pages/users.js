@@ -8,7 +8,8 @@ initAuth(async (user) => {
   }
 
   try {
-    const profiles = await profilesApi.getAll()
+    const allProfiles = await profilesApi.getAll()
+    const profiles = allProfiles.filter(p => p.id !== user.id && !p.isAdmin)
     
     let html = `
       <div style="max-width: 800px; margin: 0 auto; padding: 1rem;">

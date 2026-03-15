@@ -7,10 +7,11 @@ import io.ktor.server.routing.*
 import org.example.firebase.FirebaseService
 import org.example.models.FriendRelation
 import org.example.models.FavouriteEvent
+import org.example.models.Profile
 import org.example.database.withLogging
 
 fun Route.friendRoutes() {
-    val friendsCollection = "friends_relations"
+    val friendsCollection = "Friendship_relations"
 
     route("/api/friends") {
         get {
@@ -31,18 +32,55 @@ fun Route.friendRoutes() {
             val userId = call.parameters["userId"] ?: return@get call.respond(
                 HttpStatusCode.BadRequest, "Missing userId"
             )
-            val friends = withLogging("GET friends for $userId") {
+            val friendProfiles = withLogging("GET friend profiles for $userId") {
+                val friendsRelations = mutableListOf<FriendRelation>()
+                
+                // Find where the user is listed as userId
                 val documents = FirebaseService.firestore.collection(friendsCollection)
                     .whereEqualTo("userId", userId).get().get()
-                documents.map { doc ->
+                friendsRelations.addAll(documents.map { doc ->
                     FriendRelation(
                         id = doc.id,
                         userId = doc.getString("userId") ?: "",
                         friendId = doc.getString("friendId") ?: ""
                     )
+                })
+                
+                // Find where the user is listed as friendId
+                val documentsAsFriend = FirebaseService.firestore.collection(friendsCollection)
+                    .whereEqualTo("friendId", userId).get().get()
+                friendsRelations.addAll(documentsAsFriend.map { doc ->
+                    FriendRelation(
+                        id = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        friendId = doc.getString("friendId") ?: ""
+                    )
+                })
+                
+                // Extract distinct friend IDs
+                val distinctFriendIds = friendsRelations.map { 
+                    if (it.userId == userId) it.friendId else it.userId 
+                }.distinct().filter { it != userId }
+                
+                // Fetch profile for each friend ID
+                distinctFriendIds.mapNotNull { friendId ->
+                    val doc = FirebaseService.firestore.collection("Profile").document(friendId).get().get()
+                    if (doc.exists()) {
+                        Profile(
+                            id = doc.id,
+                            name = doc.getString("name") ?: "",
+                            age = doc.getLong("age")?.toInt(),
+                            gender = doc.getBoolean("gender") ?: false,
+                            email = doc.getString("email") ?: "",
+                            password = doc.getString("password") ?: "",
+                            isAdmin = doc.getBoolean("isAdmin") ?: false
+                        )
+                    } else {
+                        null
+                    }
                 }
             }
-            call.respond(friends)
+            call.respond(friendProfiles)
         }
 
         post {
@@ -67,6 +105,13 @@ fun Route.friendRoutes() {
                     .whereEqualTo("friendId", relation.friendId)
                     .get().get()
                 documents.forEach { doc -> doc.reference.delete().get() }
+                
+                // Also check reverse relation just in case it was stored that way
+                val reverseDocs = FirebaseService.firestore.collection(friendsCollection)
+                    .whereEqualTo("userId", relation.friendId)
+                    .whereEqualTo("friendId", relation.userId)
+                    .get().get()
+                reverseDocs.forEach { doc -> doc.reference.delete().get() }
             }
             call.respond(HttpStatusCode.NoContent)
         }
