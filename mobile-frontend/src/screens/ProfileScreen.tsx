@@ -6,7 +6,6 @@ import { useAuth, User } from "../auth/AuthContext";
 import AuthModal from "./AuthModal"; // если файл рядом в src/screens
 import EditInterestsModal from "./EditInterestsModal";
 import { api } from "../api";
-import createPerformanceLogger from "react-native/Libraries/Utilities/createPerformanceLogger";
 
 function Pill({ label }: { label: string }) {
   return (
