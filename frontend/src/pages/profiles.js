@@ -89,10 +89,26 @@ async function renderProfileData(currentUser, profile, canEdit) {
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
           <section>
-            <h3>${canEdit ? 'My ' : ''}Interests (${interests.length})</h3>
-            <ul id="user-interests-list">
-              ${interests.length ? interests.map(i => `<li>${i.interestId}</li>`).join('') : '<li>No interests added</li>'}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>${canEdit ? 'My ' : ''}Interests (${interests.length})</h3>
+              ${canEdit ? `<button id="add-interest-trigger" style="padding: 0.2rem 0.5rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">Add</button>` : ''}
+            </div>
+            <ul id="user-interests-list" style="list-style: none; padding: 0;">
+              ${interests.length ? interests.map(i => `
+                <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <span>${i.interestName}</span>
+                  ${canEdit ? `<button class="remove-interest-btn" data-id="${i.id}" style="padding: 0.1rem 0.3rem; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 0.7rem;">×</button>` : ''}
+                </li>
+              `).join('') : '<li>No interests added</li>'}
             </ul>
+            ${canEdit ? `
+              <div id="add-interest-container" style="display: none; margin-top: 0.5rem;">
+                <select id="available-interests-select" style="padding: 0.25rem; width: 100%; margin-bottom: 0.5rem;">
+                  <option value="">Select interest...</option>
+                </select>
+                <button id="confirm-add-interest" style="padding: 0.25rem 0.5rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; width: 100%;">Add Selected</button>
+              </div>
+            ` : ''}
           </section>
 
           <section>
@@ -171,6 +187,47 @@ async function renderProfileData(currentUser, profile, canEdit) {
           }
         }
       }
+
+      const addInterestTrigger = document.getElementById('add-interest-trigger')
+      const addInterestContainer = document.getElementById('add-interest-container')
+      const interestSelect = document.getElementById('available-interests-select')
+
+      addInterestTrigger.onclick = async () => {
+        if (addInterestContainer.style.display === 'none') {
+          try {
+            const allInterests = await interestsApi.getAll()
+            const currentInterestIds = interests.map(i => i.id)
+            const available = allInterests.filter(i => !currentInterestIds.includes(i.id))
+            
+            interestSelect.innerHTML = '<option value="">Select interest...</option>' + 
+              available.map(i => `<option value="${i.id}">${i.interestName}</option>`).join('')
+            
+            addInterestContainer.style.display = 'block'
+          } catch (err) { alert('Failed to load available interests: ' + err.message) }
+        } else {
+          addInterestContainer.style.display = 'none'
+        }
+      }
+
+      document.getElementById('confirm-add-interest').onclick = async () => {
+        const interestId = interestSelect.value
+        if (!interestId) return
+        try {
+          await interestsApi.addUserInterest({ userId: profile.id, interestId })
+          window.location.reload()
+        } catch (err) { alert('Failed to add interest: ' + err.message) }
+      }
+
+      document.querySelectorAll('.remove-interest-btn').forEach(btn => {
+        btn.onclick = async () => {
+          if (confirm('Remove this interest?')) {
+            try {
+              await interestsApi.removeUserInterest({ userId: profile.id, interestId: btn.dataset.id })
+              window.location.reload()
+            } catch (err) { alert('Failed to remove interest: ' + err.message) }
+          }
+        }
+      })
     } else {
       document.getElementById('friend-btn').onclick = async () => {
         try {

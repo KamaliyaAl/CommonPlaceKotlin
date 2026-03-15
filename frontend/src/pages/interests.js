@@ -61,10 +61,10 @@ async function renderInterests() {
   document.getElementById('edit-interest-form').onsubmit = async (e) => {
     e.preventDefault()
     const id = document.getElementById('edit-int-id').value
-    const interestName = document.getElementById('edit-int-name').value
+    const interest = document.getElementById('edit-int-name').value
     try {
       // Need update endpoint? Let's check api.js
-      await interestsApi.update(id, { interestName })
+      await interestsApi.update(id, { interestName: interest })
       document.getElementById('edit-interest-modal').style.display = 'none'
       renderInterests()
     } catch (err) {

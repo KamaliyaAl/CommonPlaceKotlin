@@ -60,6 +60,8 @@ export const interestsApi = {
   delete: (id) => request(`/interests/${id}`, { method: 'DELETE' }),
   getAllUserInterests: () => request('/user-interests'),
   getUserInterests: (userId) => request(`/user-interests/${userId}`),
+  addUserInterest: (userInterest) => request('/user-interests', { method: 'POST', body: JSON.stringify(userInterest) }),
+  removeUserInterest: (userInterest) => request('/user-interests', { method: 'DELETE', body: JSON.stringify(userInterest) }),
 }
 
 // Locations

@@ -95,5 +95,37 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to remove friend');
     return true;
+  },
+  
+  async getInterests() {
+    const response = await fetch(`${API_URL}/interests`);
+    if (!response.ok) throw new Error('Failed to fetch interests');
+    return await response.json();
+  },
+
+  async getUserInterests(userId: string) {
+    const response = await fetch(`${API_URL}/user-interests/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch user interests');
+    return await response.json();
+  },
+
+  async addUserInterest(userId: string, interestId: string) {
+    const response = await fetch(`${API_URL}/user-interests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, interestId })
+    });
+    if (!response.ok) throw new Error('Failed to add user interest');
+    return await response.json();
+  },
+
+  async removeUserInterest(userId: string, interestId: string) {
+    const response = await fetch(`${API_URL}/user-interests`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, interestId })
+    });
+    if (!response.ok) throw new Error('Failed to remove user interest');
+    return true;
   }
 };

@@ -13,10 +13,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 
-const SUGGESTIONS = [
-  "Swimming", "Running", "Reading", "Volleyball", "Dancing",
-  "Gym", "Yoga", "Cycling", "Hiking", "Cooking", "Photography",
-];
+import { api } from "../api";
 
 function Chip({ label, onRemove }: { label: string; onRemove?: () => void }) {
   return (
@@ -33,43 +30,37 @@ function Chip({ label, onRemove }: { label: string; onRemove?: () => void }) {
 
 export default function EditInterestsModal({
   visible,
-  initial,
+  currentInterests,
   onClose,
-  onSave,
+  onAddInterest,
+  onRemoveInterest,
 }: {
   visible: boolean;
-  initial: string[];
+  currentInterests: any[];
   onClose: () => void;
-  onSave: (next: string[]) => void;
+  onAddInterest: (id: string) => void;
+  onRemoveInterest: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>(initial);
+  const [allStack, setAllStack] = useState<any[]>([]);
 
   useEffect(() => {
     if (visible) {
-      setSelected(initial);
-      setQuery("");
+      api.getInterests().then(setAllStack).catch(console.error);
     }
-  }, [visible, initial]);
+  }, [visible]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = q
-      ? SUGGESTIONS.filter((x) => x.toLowerCase().includes(q))
-      : SUGGESTIONS;
-    return base.filter((x) => !selected.includes(x));
-  }, [query, selected]);
+    const currentIds = currentInterests.map(i => i.id);
+    return allStack.filter(s => 
+      s.interestName.toLowerCase().includes(q) && !currentIds.includes(s.id)
+    );
+  }, [query, allStack, currentInterests]);
 
-  function addInterest(name: string) {
-    const clean = name.trim();
-    if (!clean) return;
-    if (selected.includes(clean)) return;
-    setSelected((prev) => [...prev, clean]);
+  function handleAdd(id: string) {
+    onAddInterest(id);
     setQuery("");
-  }
-
-  function removeInterest(name: string) {
-    setSelected((prev) => prev.filter((x) => x !== name));
   }
 
   return (
@@ -85,34 +76,29 @@ export default function EditInterestsModal({
               <View style={s.headerRow}>
                 <Text style={s.title}>Edit interests</Text>
                 <TouchableOpacity onPress={onClose} style={s.closeBtn}>
-                  <Text style={s.closeText}>Close</Text>
+                  <Text style={s.closeText}>Done</Text>
                 </TouchableOpacity>
               </View>
 
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Type an interest (e.g., 'Tennis')"
+                placeholder="Search interests..."
                 style={s.input}
-                onSubmitEditing={() => addInterest(query)}
                 returnKeyType="done"
               />
 
-              <TouchableOpacity style={s.addBtn} onPress={() => addInterest(query)}>
-                <Text style={s.addBtnText}>Add</Text>
-              </TouchableOpacity>
-
-              <Text style={s.section}>Selected</Text>
+              <Text style={s.section}>My Interests</Text>
               <View style={s.chipsWrap}>
-                {selected.length === 0 ? (
+                {currentInterests.length === 0 ? (
                   <Text style={s.emptyText}>No interests yet</Text>
                 ) : null}
-                {selected.map((x) => (
-                  <Chip key={x} label={x} onRemove={() => removeInterest(x)} />
+                {currentInterests.map((x) => (
+                  <Chip key={x.id} label={x.interestName} onRemove={() => onRemoveInterest(x.id)} />
                 ))}
               </View>
 
-              <Text style={s.section}>Suggestions</Text>
+              <Text style={s.section}>Available from Stack</Text>
               <ScrollView
                 style={s.suggestionsScroll}
                 keyboardShouldPersistTaps="handled"
@@ -120,25 +106,19 @@ export default function EditInterestsModal({
                 <View style={s.suggestionsWrap}>
                   {filtered.map((x) => (
                     <TouchableOpacity
-                      key={x}
-                      onPress={() => addInterest(x)}
+                      key={x.id}
+                      onPress={() => handleAdd(x.id)}
                       style={s.suggestionItem}
                     >
-                      <Text style={s.suggestionTitle}>{x}</Text>
+                      <Text style={s.suggestionTitle}>{x.interestName}</Text>
                       <Text style={s.suggestionSub}>Tap to add</Text>
                     </TouchableOpacity>
                   ))}
+                  {filtered.length === 0 && (
+                    <Text style={s.emptyText}>No matching interests available</Text>
+                  )}
                 </View>
               </ScrollView>
-
-              <View style={s.footerRow}>
-                <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
-                  <Text style={s.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.saveBtn} onPress={() => onSave(selected)}>
-                  <Text style={s.saveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -174,15 +154,6 @@ const s = StyleSheet.create({
     borderRadius: 12,
     marginTop: 12,
   },
-  addBtn: {
-    backgroundColor: "black",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  addBtnText: { color: "white", fontWeight: "900" },
-
   section: { marginTop: 14, marginBottom: 8, fontSize: 16, fontWeight: "900" },
 
   emptyText: { color: "#666" },
@@ -213,22 +184,4 @@ const s = StyleSheet.create({
   suggestionItem: { backgroundColor: "#f2f2f2", padding: 12, borderRadius: 12 },
   suggestionTitle: { fontWeight: "700" },
   suggestionSub: { color: "#666" },
-
-  footerRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: "#f2f2f2",
-    padding: 14,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-  cancelText: { fontWeight: "900" },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: "black",
-    padding: 14,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-  saveText: { color: "white", fontWeight: "900" },
 });

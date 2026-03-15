@@ -11,7 +11,7 @@ import org.example.database.withLogging
 
 fun Route.interestRoutes() {
     val interestsCollection = "Interests_stack"
-    val userInterestsCollection = "user_interests"
+    val userInterestsCollection = "Users_interest"
 
     route("/api/interests") {
         get {
@@ -31,7 +31,7 @@ fun Route.interestRoutes() {
             val id = call.parameters["id"] ?: return@get call.respond(
                 HttpStatusCode.BadRequest, "Missing id"
             )
-            val interest = withLogging("GET interest $id") {
+            val interest = withLogging("GET interestName $id") {
                 val doc = FirebaseService.firestore.collection(interestsCollection).document(id).get().get()
                 if (!doc.exists()) {
                     null
@@ -56,7 +56,7 @@ fun Route.interestRoutes() {
                 "id" to docRef.id,
                 "interestName" to interest.interestName
             )
-            withLogging("POST interest") {
+            withLogging("POST interestName") {
                 docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, interest.copy(id = docRef.id))
@@ -71,7 +71,7 @@ fun Route.interestRoutes() {
                 "id" to id,
                 "interestName" to interest.interestName
             )
-            withLogging("PUT interest $id") {
+            withLogging("PUT interestName $id") {
                 FirebaseService.firestore.collection(interestsCollection).document(id).set(data).get()
             }
             call.respond(HttpStatusCode.OK, interest.copy(id = id))
@@ -81,7 +81,7 @@ fun Route.interestRoutes() {
             val id = call.parameters["id"] ?: return@delete call.respond(
                 HttpStatusCode.BadRequest, "Missing id"
             )
-            withLogging("DELETE interest $id") {
+            withLogging("DELETE interestName $id") {
                 FirebaseService.firestore.collection(interestsCollection).document(id).delete().get()
             }
             call.respond(HttpStatusCode.NoContent)
@@ -95,8 +95,8 @@ fun Route.interestRoutes() {
                 documents.map { doc ->
                     UserInterest(
                         id = doc.id,
-                        userId = doc.getString("userId") ?: "",
-                        interestId = doc.getString("interestId") ?: ""
+                        userId = doc.getString("user_id") ?: "",
+                        interestId = doc.getString("interest_id") ?: ""
                     )
                 }
             }
@@ -107,18 +107,23 @@ fun Route.interestRoutes() {
             val userId = call.parameters["userId"] ?: return@get call.respond(
                 HttpStatusCode.BadRequest, "Missing userId"
             )
-            val userInterests = withLogging("GET user interests for $userId") {
-                val documents = FirebaseService.firestore.collection(userInterestsCollection)
-                    .whereEqualTo("userId", userId).get().get()
-                documents.map { doc ->
-                    UserInterest(
-                        id = doc.id,
-                        userId = doc.getString("userId") ?: "",
-                        interestId = doc.getString("interestId") ?: ""
-                    )
+            val fullInterests = withLogging("GET full user interests for $userId") {
+                val userInterestDocs = FirebaseService.firestore.collection(userInterestsCollection)
+                    .whereEqualTo("user_id", userId).get().get()
+                
+                val interestIds = userInterestDocs.map { it.getString("interest_id") ?: "" }.filter { it.isNotEmpty() }
+                
+                interestIds.mapNotNull { interestId ->
+                    val doc = FirebaseService.firestore.collection(interestsCollection).document(interestId).get().get()
+                    if (doc.exists()) {
+                        Interest(
+                            id = doc.id,
+                            interestName = doc.getString("interestName") ?: ""
+                        )
+                    } else null
                 }
             }
-            call.respond(userInterests)
+            call.respond(fullInterests)
         }
 
         post {
@@ -126,10 +131,10 @@ fun Route.interestRoutes() {
             val docRef = FirebaseService.firestore.collection(userInterestsCollection).document()
             val data: Map<String, Any?> = mapOf(
                 "id" to docRef.id,
-                "userId" to userInterest.userId,
-                "interestId" to userInterest.interestId
+                "user_id" to userInterest.userId,
+                "interest_id" to userInterest.interestId
             )
-            withLogging("POST user interest") {
+            withLogging("POST user interestName") {
                 docRef.set(data).get()
             }
             call.respond(HttpStatusCode.Created, userInterest.copy(id = docRef.id))
@@ -137,10 +142,10 @@ fun Route.interestRoutes() {
 
         delete {
             val userInterest = call.receive<UserInterest>()
-            withLogging("DELETE user interest") {
+            withLogging("DELETE user interestName") {
                 val documents = FirebaseService.firestore.collection(userInterestsCollection)
-                    .whereEqualTo("userId", userInterest.userId)
-                    .whereEqualTo("interestId", userInterest.interestId)
+                    .whereEqualTo("user_id", userInterest.userId)
+                    .whereEqualTo("interest_id", userInterest.interestId)
                     .get().get()
                 documents.forEach { doc -> doc.reference.delete().get() }
             }

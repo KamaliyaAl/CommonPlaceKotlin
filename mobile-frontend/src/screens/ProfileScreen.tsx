@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const [targetUser, setTargetUser] = useState<User | null>(null);
   const [fetchingUser, setFetchingUser] = useState(false);
   const [friends, setFriends] = useState<any[]>([]);
+  const [userInterests, setUserInterests] = useState<any[]>([]);
   const [isFriend, setIsFriend] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [editInterestsVisible, setEditInterestsVisible] = useState(false);
@@ -38,9 +39,20 @@ export default function ProfileScreen() {
       setTargetUser(null);
     }
     if (userId || currentUser?.uid) {
-      fetchFriends(userId || currentUser?.uid || "")
+      const id = userId || currentUser?.uid || "";
+      fetchFriends(id);
+      fetchInterests(id);
     }
   }, [userId, currentUser]);
+
+  const fetchInterests = async (id: string) => {
+    try {
+      const data = await api.getUserInterests(id);
+      setUserInterests(data);
+    } catch (err) {
+      console.error("Failed to fetch interests:", err);
+    }
+  };
 
   const fetchFriends = async (id: string) => {
     try {
@@ -79,6 +91,26 @@ export default function ProfileScreen() {
       fetchFriends(userId);
     } catch (err) {
       console.error("Failed to remove friend:", err);
+    }
+  };
+
+  const handleAddInterest = async (interestId: string) => {
+    if (!currentUser) return;
+    try {
+      await api.addUserInterest(currentUser.uid, interestId);
+      fetchInterests(currentUser.uid);
+    } catch (err) {
+      console.error("Failed to add interest:", err);
+    }
+  };
+
+  const handleRemoveInterest = async (interestId: string) => {
+    if (!currentUser) return;
+    try {
+      await api.removeUserInterest(currentUser.uid, interestId);
+      fetchInterests(currentUser.uid);
+    } catch (err) {
+      console.error("Failed to remove interest:", err);
     }
   };
 
@@ -153,12 +185,10 @@ export default function ProfileScreen() {
             <AuthModal visible={authVisible} onClose={() => setAuthVisible(false)} />
             <EditInterestsModal
               visible={editInterestsVisible}
-              initial={user.interests ?? []}
+              currentInterests={userInterests}
               onClose={() => setEditInterestsVisible(false)}
-              onSave={async (next) => {
-                await updateProfile({ interests: next });
-                setEditInterestsVisible(false);
-              }}
+              onAddInterest={handleAddInterest}
+              onRemoveInterest={handleRemoveInterest}
             />
           </>
         )}
@@ -225,10 +255,20 @@ export default function ProfileScreen() {
               <Text style={s.sectionTitle}>Interests:</Text>
 
               <View style={s.pillsWrap}>
-                {(user.interests ?? []).map((it: string) => (
-                  <Pill key={it} label={it} />
+                {userInterests.map((it: any) => (
+                  <View key={it.id} style={s.pillRow}>
+                    <Pill label={it.interest} />
+                    {isMe && (
+                      <TouchableOpacity 
+                        style={s.pillRemove} 
+                        onPress={() => handleRemoveInterest(it.id)}
+                      >
+                        <Text style={s.pillRemoveText}>×</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 ))}
-                {(user.interests ?? []).length === 0 && (
+                {userInterests.length === 0 && (
                   <Text style={{ color: "#999" }}>No interests yet</Text>
                 )}
               </View>
@@ -305,6 +345,9 @@ const s = StyleSheet.create({
   midRow: { flexDirection: "row", marginTop: 28, gap: 16 },
   sectionTitle: { fontSize: 20, fontWeight: "800", marginBottom: 10 },
   pillsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  pillRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  pillRemove: { backgroundColor: "#dc3545", width: 20, height: 20, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  pillRemoveText: { color: "white", fontWeight: "900", fontSize: 12 },
   pill: { backgroundColor: "#999", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999 },
   pillText: { color: "white", fontWeight: "700", fontSize: 12 },
   editBig: { marginTop: 16, alignSelf: "flex-start", backgroundColor: "black", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14 },
