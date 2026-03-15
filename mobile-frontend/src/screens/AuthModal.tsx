@@ -10,18 +10,18 @@ export default function AuthModal({ visible, onClose }: { visible: boolean; onCl
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [gender, setGender] = useState<string>("");
+  const [gender, setGender] = useState<boolean | null>(null);
 
   async function onPrimary() {
     try {
       if (mode === "signin") {
         await signInEmail(email, password);
       } else {
-        if (!gender) {
+        if (gender === null) {
           alert("Please select gender");
           return;
         }
-        await signUpEmail(email, password, name, parseInt(age) || undefined, gender || undefined);
+        await signUpEmail(email, password, name, parseInt(age) || undefined, gender);
       }
       onClose();
     } catch (err: any) {
@@ -53,16 +53,16 @@ export default function AuthModal({ visible, onClose }: { visible: boolean; onCl
               <TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="numeric" style={s.input} />
               <View style={s.genderRow}>
                 <TouchableOpacity 
-                  style={[s.genderBtn, gender === "Female" && s.genderBtnActive]} 
-                  onPress={() => setGender("Female")}
+                  style={[s.genderBtn, gender === true && s.genderBtnActive]} 
+                  onPress={() => setGender(true)}
                 >
-                  <Text style={[s.genderText, gender === "Female" && s.genderTextActive]}>Female</Text>
+                  <Text style={[s.genderText, gender === true && s.genderTextActive]}>Female</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[s.genderBtn, gender === "Male" && s.genderBtnActive]} 
-                  onPress={() => setGender("Male")}
+                  style={[s.genderBtn, gender === false && s.genderBtnActive]} 
+                  onPress={() => setGender(false)}
                 >
-                  <Text style={[s.genderText, gender === "Male" && s.genderTextActive]}>Male</Text>
+                  <Text style={[s.genderText, gender === false && s.genderTextActive]}>Male</Text>
                 </TouchableOpacity>
               </View>
             </>

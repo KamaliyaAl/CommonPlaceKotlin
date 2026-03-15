@@ -130,7 +130,7 @@ class ProfileIntegrationTest {
         every { mockDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
 
         // 1. POST /api/account
-        val newProfile = Profile(name = "New User", email = "new@example.com", password = "password")
+        val newProfile = Profile(name = "New User", email = "new@example.com", password = "password", gender = false)
         val postResponse = client.post("/api/account") {
             contentType(ContentType.Application.Json)
             setBody(newProfile)

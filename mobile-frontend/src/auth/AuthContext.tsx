@@ -8,7 +8,7 @@ export type User = {
   name: string;
   email: string;
   age?: number;
-  gender?: string;
+  gender?: boolean;
   photoURL?: string;
   interests?: string[];
   friendsCount?: number;
@@ -19,7 +19,7 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   signInEmail: (email: string, password: string) => Promise<void>;
-  signUpEmail: (email: string, password: string, name: string, age?: number, gender?: string) => Promise<void>;
+  signUpEmail: (email: string, password: string, name: string, age?: number, gender?: boolean) => Promise<void>;
   signInGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const signUpEmail = async (email: string, password: string, name: string, age?: number, gender?: string) => {
+  const signUpEmail = async (email: string, password: string, name: string, age?: number, gender?: boolean) => {
     const response = await fetch(`${API_URL}/account`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

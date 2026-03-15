@@ -7,7 +7,7 @@ data class Profile(
     val id: String? = null,
     val name: String,
     val age: Int? = null,
-    val gender: String = "",
+    val gender: Boolean,
     val email: String,
     val password: String,
     val isAdmin: Boolean = false

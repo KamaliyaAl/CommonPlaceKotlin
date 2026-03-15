@@ -34,7 +34,7 @@ fun Route.profileRoutes() {
                         id = existingProfile.id,
                         name = existingProfile.getString("name") ?: "",
                         age = existingProfile.getLong("age")?.toInt(),
-                        gender = existingProfile.get("gender")?.toString() ?: "",
+                        gender = existingProfile.getBoolean("gender") ?: false,
                         email = existingProfile.getString("email") ?: "",
                         password = existingPassword,
                         isAdmin = existingProfile.getBoolean("isAdmin") ?: false
@@ -57,7 +57,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.get("gender")?.toString() ?: "",
+                        gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -82,7 +82,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.get("gender")?.toString() ?: "",
+                        gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false
@@ -111,7 +111,7 @@ fun Route.profileRoutes() {
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         age = doc.getLong("age")?.toInt(),
-                        gender = doc.get("gender")?.toString() ?: "",
+                        gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
                         isAdmin = doc.getBoolean("isAdmin") ?: false

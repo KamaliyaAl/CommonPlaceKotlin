@@ -52,7 +52,7 @@ async function renderProfileData(currentUser, profile, canEdit) {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div><strong>Name:</strong> ${profile.name}</div>
             <div><strong>Age:</strong> ${profile.age ?? '-'}</div>
-            <div><strong>Gender:</strong> ${profile.gender ? 'Male' : 'Female'}</div>
+            <div><strong>Gender:</strong> ${profile.gender ? 'Female' : 'Male'}</div>
             <div><strong>Email:</strong> ${profile.email}</div>
           </div>
           <div style="margin-top: 1.5rem; text-align: right; display: flex; justify-content: flex-end; gap: 1rem;">
@@ -75,8 +75,8 @@ async function renderProfileData(currentUser, profile, canEdit) {
             <input type="text" id="edit-name" value="${profile.name}" required style="padding: 0.5rem;" />
             <input type="number" id="edit-age" value="${profile.age ?? ''}" style="padding: 0.5rem;" />
             <select id="edit-gender" style="padding: 0.5rem;">
-              <option value="false" ${!profile.gender ? 'selected' : ''}>Female</option>
-              <option value="true" ${profile.gender ? 'selected' : ''}>Male</option>
+              <option value="false" ${!profile.gender ? 'selected' : ''}>Male</option>
+              <option value="true" ${profile.gender ? 'selected' : ''}>Female</option>
             </select>
             <input type="password" id="edit-password" value="${profile.password}" placeholder="New Password" required style="padding: 0.5rem;" />
             <div style="display: flex; gap: 1rem;">

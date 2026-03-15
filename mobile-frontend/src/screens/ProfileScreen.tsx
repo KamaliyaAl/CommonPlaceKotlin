@@ -187,7 +187,7 @@ export default function ProfileScreen() {
 
             <Text style={s.line}>Email: {user.email}</Text>
             <Text style={s.line}>Age: {user.age ?? "-"}</Text>
-            <Text style={s.line}>Gender: {user.gender === true ? "Male" : user.gender === false ? "Female" : "-"}</Text>
+            <Text style={s.line}>Gender: {user.gender === true ? "Female" : user.gender === false ? "Male" : "-"}</Text>
             <Text style={s.line}>City: {user.city ?? "-"}</Text>
 
             {isMe ? (

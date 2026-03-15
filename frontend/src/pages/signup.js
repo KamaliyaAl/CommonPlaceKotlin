@@ -51,8 +51,8 @@ function renderSignup() {
             <input type="text" id="signup-name" placeholder="Full Name" required value="${signupData.name}" style="padding: 0.5rem;" />
             <input type="number" id="signup-age" placeholder="Age" value="${signupData.age || ''}" style="padding: 0.5rem;" />
             <select id="signup-gender" style="padding: 0.5rem;">
-              <option value="false" ${!signupData.gender ? 'selected' : ''}>Female</option>
-              <option value="true" ${signupData.gender ? 'selected' : ''}>Male</option>
+              <option value="false" ${!signupData.gender ? 'selected' : ''}>Male</option>
+              <option value="true" ${signupData.gender ? 'selected' : ''}>Female</option>
             </select>
             <div style="display: flex; gap: 0.5rem;">
               <button type="button" id="prev-step" style="padding: 0.5rem; cursor: pointer; flex: 1; background: #6c757d; color: white; border: none; border-radius: 4px;">Back</button>

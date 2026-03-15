@@ -72,7 +72,7 @@ async function renderProfilesTab(container) {
             <td>${p.name}</td>
             <td>${p.email}</td>
             <td>${p.age ?? '-'}</td>
-            <td>${p.gender ? 'Male' : 'Female'}</td>
+            <td>${p.gender ? 'Female' : 'Male'}</td>
             <td>${p.isAdmin ? 'Yes' : 'No'}</td>
             <td>
               <button class="edit-profile-btn" data-id="${p.id}">Edit</button>
@@ -93,8 +93,8 @@ async function renderProfilesTab(container) {
         <input id="add-password" type="password" placeholder="Password" required style="padding: 0.5rem;" />
         <input id="add-age" type="number" placeholder="Age" style="padding: 0.5rem;" />
         <select id="add-gender" style="padding: 0.5rem;">
-          <option value="false">Female</option>
-          <option value="true">Male</option>
+          <option value="false">Male</option>
+          <option value="true">Female</option>
         </select>
         <label style="display: flex; align-items: center; gap: 0.5rem;">
           <input type="checkbox" id="add-isadmin" /> Administrator
@@ -134,8 +134,8 @@ async function renderProfilesTab(container) {
           <input type="email" id="edit-email" value="${p.email}" required style="padding: 0.5rem;" />
           <input type="number" id="edit-age" value="${p.age ?? ''}" style="padding: 0.5rem;" />
           <select id="edit-gender" style="padding: 0.5rem;">
-            <option value="false" ${!p.gender ? 'selected' : ''}>Female</option>
-            <option value="true" ${p.gender ? 'selected' : ''}>Male</option>
+            <option value="false" ${!p.gender ? 'selected' : ''}>Male</option>
+            <option value="true" ${p.gender ? 'selected' : ''}>Female</option>
           </select>
           <input type="password" id="edit-password" value="${p.password}" placeholder="Password" required style="padding: 0.5rem;" />
           <label style="display: flex; align-items: center; gap: 0.5rem;">
