@@ -150,9 +150,16 @@ fun Route.profileRoutes() {
 
             val profile = call.receive<Profile>()
 
-            // Verification of permissions could be added here if we had auth middleware,
-            // but for now we follow the user's logic in the frontend and keep the backend open
-            // as requested by the current project structure.
+            val existingProfileDoc = withLogging("GET profile for update $id") {
+                FirebaseService.firestore.collection(collection)
+                    .document(id).get().get()
+            }
+
+            val finalPassword = if (profile.password.isBlank() && existingProfileDoc.exists()) {
+                existingProfileDoc.getString("password") ?: ""
+            } else {
+                profile.password
+            }
             
             val data: Map<String, Any?> = mapOf(
                 "id" to id,
@@ -160,7 +167,7 @@ fun Route.profileRoutes() {
                 "age" to profile.age,
                 "gender" to profile.gender,
                 "email" to profile.email,
-                "password" to profile.password,
+                "password" to finalPassword,
                 "isAdmin" to profile.isAdmin
             )
             withLogging("PUT profile $id") {
