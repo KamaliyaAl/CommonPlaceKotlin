@@ -72,13 +72,13 @@ export const api = {
   },
 
   async getFriends(userId: string) {
-    const response = await fetch(`${API_URL}/api/friends/${userId}`);
+    const response = await fetch(`${API_URL}/friends/${userId}`);
     if (!response.ok) throw new Error('Failed to fetch friends');
     return await response.json();
   },
 
   async addFriend(userId: string, friendId: string) {
-    const response = await fetch(`${API_URL}/api/friends`, {
+    const response = await fetch(`${API_URL}/friends`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, friendId })
@@ -88,7 +88,7 @@ export const api = {
   },
 
   async removeFriend(userId: string, friendId: string) {
-    const response = await fetch(`${API_URL}/api/friends`, {
+    const response = await fetch(`${API_URL}/friends`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, friendId })

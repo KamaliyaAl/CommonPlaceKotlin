@@ -38,7 +38,7 @@ export default function UsersListScreen() {
   const renderUser = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={s.card}
-      onPress={() => navigation.navigate("Profile", { userId: item.id })}
+      onPress={() => navigation.navigate("UserProfile", { userId: item.id })}
     >
       <View style={s.avatar} />
       <View style={s.info}>

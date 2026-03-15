@@ -301,7 +301,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity 
                   key={idx} 
                   style={s.friendItem}
-                  onPress={() => navigation.navigate("Profile", { userId: f.id })}
+                  onPress={() => navigation.navigate("UserProfile", { userId: f.id })}
                 >
                   <View style={s.friendAvatar} />
                   <View>

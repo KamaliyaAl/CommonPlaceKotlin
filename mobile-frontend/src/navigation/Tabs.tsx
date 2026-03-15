@@ -1,5 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Platform } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -13,12 +14,31 @@ export type BottomTabParamList = {
     Add: undefined;
     List: undefined;
     Map: { date?: string } | undefined;
-    Users: undefined;
+    UsersTab: undefined;
     Chat: undefined;
-    Profile: { userId?: string } | undefined;
+    ProfileTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
+const UsersStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
+
+function UsersNavigator() {
+    return (
+        <UsersStack.Navigator screenOptions={{ headerShown: false }}>
+            <UsersStack.Screen name="UsersList" component={UsersListScreen} />
+            <UsersStack.Screen name="UserProfile" component={ProfileScreen} />
+        </UsersStack.Navigator>
+    );
+}
+
+function ProfileNavigator() {
+    return (
+        <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+            <ProfileStack.Screen name="MyProfile" component={ProfileScreen} />
+        </ProfileStack.Navigator>
+    );
+}
 
 export default function Tabs() {
     return (
@@ -52,13 +72,13 @@ export default function Tabs() {
                         case "Map":
                             iconName = "map-marker-radius-outline";
                             break;
-                        case "Users":
+                        case "UsersTab":
                             iconName = "account-group-outline";
                             break;
                         case "Chat":
                             iconName = "message-outline";
                             break;
-                        case "Profile":
+                        case "ProfileTab":
                             iconName = "account-outline";
                             break;
                     }
@@ -78,8 +98,8 @@ export default function Tabs() {
             <Tab.Screen name="Add" component={AddScreen} />
             <Tab.Screen name="List" component={ListStack} />
             <Tab.Screen name="Map" component={MapScreen} />
-            <Tab.Screen name="Users" component={UsersListScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen name="UsersTab" component={UsersNavigator} />
+            <Tab.Screen name="ProfileTab" component={ProfileNavigator} />
         </Tab.Navigator>
     );
 }
