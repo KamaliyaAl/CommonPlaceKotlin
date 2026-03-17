@@ -11,7 +11,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import UsersListScreen from "../screens/UsersListScreen";
 
 export type BottomTabParamList = {
-    Add: undefined;
+    AddTab: undefined;
     List: undefined;
     Map: { date?: string } | undefined;
     UsersTab: undefined;
@@ -22,6 +22,22 @@ export type BottomTabParamList = {
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 const UsersStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
+const AddStack = createNativeStackNavigator();
+
+import LocationPickerScreen from "../screens/LocationPickerScreen";
+
+function AddNavigator() {
+    return (
+        <AddStack.Navigator screenOptions={{ headerShown: false }}>
+            <AddStack.Screen name="AddMain" component={AddScreen} />
+            <AddStack.Screen 
+                name="LocationPicker" 
+                component={LocationPickerScreen}
+                options={{ presentation: 'modal' }}
+            />
+        </AddStack.Navigator>
+    );
+}
 
 function UsersNavigator() {
     return (
@@ -63,7 +79,7 @@ export default function Tabs() {
                     let iconName: keyof typeof MaterialCommunityIcons.glyphMap = "help";
 
                     switch (route.name) {
-                        case "Add":
+                        case "AddTab":
                             iconName = "square-edit-outline";
                             break;
                         case "List":
@@ -95,7 +111,7 @@ export default function Tabs() {
                 },
             })}
         >
-            <Tab.Screen name="Add" component={AddScreen} />
+            <Tab.Screen name="AddTab" component={AddNavigator} />
             <Tab.Screen name="List" component={ListStack} />
             <Tab.Screen name="Map" component={MapScreen} />
             <Tab.Screen name="UsersTab" component={UsersNavigator} />

@@ -20,6 +20,7 @@ frontend/.env.local
 
 # Environment
 .env.local
+mobile-frontend/.env
 
 # OS
 .DS_Store

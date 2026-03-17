@@ -197,21 +197,26 @@ export default function AddScreen() {
                     </View>
 
                     {/* Map picker */}
-                    <View style={{ width: "100%", height: 220, marginBottom: 16 }}>
-                        <Text style={styles.sectionTitle}>Pick location</Text>
-                        <MapView
-                            provider={PROVIDER_DEFAULT}
-                            style={styles.mapPicker}
-                            initialRegion={LIMASSOL}
-                            onPress={onMapPress}
+                    <View style={{ width: "100%", marginBottom: 16 }}>
+                        <Text style={styles.sectionTitle}>Place location</Text>
+                        <Pressable 
+                            style={styles.mapPickerPlaceholder} 
+                            onPress={() => navigation.navigate("LocationPicker", {
+                                initialLat: coord?.lat,
+                                initialLng: coord?.lng,
+                                onSelect: (res: { latitude: number; longitude: number }) => {
+                                    setCoord({ lat: res.latitude, lng: res.longitude });
+                                }
+                            })}
                         >
-                            {coord && (
-                                <Marker coordinate={{ latitude: coord.lat, longitude: coord.lng }} />
-                            )}
-                        </MapView>
-                        {!coord && (
-                            <Text style={styles.hintText}>Tap on the map to set event location</Text>
-                        )}
+                            <MaterialCommunityIcons name="map-marker-plus" size={32} color="#8AAFB1" />
+                            <Text style={styles.mapPickerText}>
+                                {coord 
+                                    ? `Lat: ${coord.lat.toFixed(4)}, Lng: ${coord.lng.toFixed(4)}`
+                                    : "Tap to pick location on map"
+                                }
+                            </Text>
+                        </Pressable>
                     </View>
 
                     <Pressable style={styles.createBtn} onPress={onCreate}>
