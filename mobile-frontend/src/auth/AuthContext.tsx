@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = 'http://172.29.65.127:8080/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export type User = {
   uid: string;

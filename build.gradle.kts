@@ -30,7 +30,7 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
-    // dotenv for reading _env.local
+    // dotenv for reading .env.local
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.0")
 
     testImplementation(kotlin("test"))

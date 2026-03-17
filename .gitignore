@@ -19,7 +19,7 @@ frontend/dist/
 frontend/.env.local
 
 # Environment
-_env.local
+.env.local
 
 # OS
 .DS_Store
