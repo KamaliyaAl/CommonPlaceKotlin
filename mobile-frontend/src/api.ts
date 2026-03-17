@@ -127,5 +127,15 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to remove user interest');
     return true;
+  },
+
+  async createInterest(interestName: string) {
+    const response = await fetch(`${API_URL}/interests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interestName })
+    });
+    if (!response.ok) throw new Error('Failed to create interest');
+    return await response.json();
   }
 };

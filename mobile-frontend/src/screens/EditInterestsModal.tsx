@@ -58,10 +58,30 @@ export default function EditInterestsModal({
     );
   }, [query, allStack, currentInterests]);
 
-  function handleAdd(id: string) {
+  async function handleAdd(id: string) {
     onAddInterest(id);
     setQuery("");
   }
+
+  async function handleCreateNew() {
+    const q = query.trim();
+    if (!q) return;
+    try {
+      const newInterest = await api.createInterest(q);
+      // Refresh list to include new interest
+      const updated = await api.getInterests();
+      setAllStack(updated);
+      onAddInterest(newInterest.id);
+      setQuery("");
+    } catch (err) {
+      console.error("Failed to create interest:", err);
+    }
+  }
+
+  const exactMatch = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return allStack.find(s => s.interestName.toLowerCase() === q);
+  }, [query, allStack]);
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -114,7 +134,20 @@ export default function EditInterestsModal({
                       <Text style={s.suggestionSub}>Tap to add</Text>
                     </TouchableOpacity>
                   ))}
-                  {filtered.length === 0 && (
+                  
+                  {query.trim().length > 0 && !exactMatch && (
+                    <TouchableOpacity
+                      onPress={handleCreateNew}
+                      style={[s.suggestionItem, { backgroundColor: "#7FA6FF33" }]}
+                    >
+                      <Text style={[s.suggestionTitle, { color: "#7FA6FF" }]}>
+                        Create "{query.trim()}"
+                      </Text>
+                      <Text style={s.suggestionSub}>Add as new interest to system</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {filtered.length === 0 && !query.trim() && (
                     <Text style={s.emptyText}>No matching interests available</Text>
                   )}
                 </View>
