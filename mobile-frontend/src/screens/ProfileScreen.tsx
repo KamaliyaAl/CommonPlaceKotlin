@@ -266,7 +266,7 @@ export default function ProfileScreen() {
               <View style={s.pillsWrap}>
                 {userInterests.map((it: any) => (
                   <View key={it.id} style={s.pillRow}>
-                    <Pill label={it.interest} />
+                    <Pill label={it.interestName} />
                     {isMe && (
                       <TouchableOpacity 
                         style={s.pillRemove} 
