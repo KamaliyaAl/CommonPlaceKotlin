@@ -74,7 +74,7 @@ fun Application.configureRouting() {
         interestRoutes()
         locationRoutes()
         friendRoutes()
-        favouriteEventRoutes()
+        favouriteRoutes()
 
         // Serve static files from the frontend/dist directory if it exists
         val distDir = File("frontend/dist")
