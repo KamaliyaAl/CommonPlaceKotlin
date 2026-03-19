@@ -41,9 +41,13 @@ async function renderProfileData(currentUser, profile, canEdit) {
     const friends = await friendsApi.getByUser(profile.id)
     const favEvents = await favouriteEventsApi.getByUser(profile.id)
     const favLocations = await favouriteLocationsApi.getByUser(profile.id)
+    const receivedRequests = canEdit ? await friendsApi.getReceivedRequests(profile.id) : []
+    const outgoingRequests = !canEdit ? await friendsApi.getOutgoingRequests(currentUser.id) : []
+    
     // profile.id - целевой профиль. currentUser.id - мой ID.
     // friends - список друзей целевого профиля. Если я там есть - мы друзья.
     const isFriend = friends.some(f => f.id === currentUser.id)
+    const hasSentRequest = outgoingRequests.some(r => r.toUserId === profile.id)
 
     let html = `
       <div style="max-width: 800px; margin: 0 auto; padding: 1rem;">
@@ -61,8 +65,8 @@ async function renderProfileData(currentUser, profile, canEdit) {
               <button id="delete-account-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px;">Delete Account</button>
               <button id="logout-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px;">Logout</button>
             ` : `
-              <button id="friend-btn" style="padding: 0.5rem 1rem; cursor: pointer; background: ${isFriend ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px;">
-                ${isFriend ? 'Remove friend' : 'Add Friend'}
+              <button id="friend-btn" ${hasSentRequest && !isFriend ? 'disabled' : ''} style="padding: 0.5rem 1rem; cursor: pointer; background: ${isFriend ? '#dc3545' : (hasSentRequest ? '#6c757d' : '#28a745')}; color: white; border: none; border-radius: 4px;">
+                ${isFriend ? 'Remove friend' : (hasSentRequest ? 'Request Sent' : 'Send Friend Request')}
               </button>
             `}
           </div>
@@ -88,6 +92,22 @@ async function renderProfileData(currentUser, profile, canEdit) {
         ` : ''}
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          ${canEdit && receivedRequests.length > 0 ? `
+          <section style="grid-column: span 2; background: #fff3cd; padding: 1rem; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 1rem;">
+            <h3 style="margin-top: 0; color: #856404;">Friend Requests (${receivedRequests.length})</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              ${receivedRequests.map(req => `
+                <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #ffeeba;">
+                  <span><strong>${req.fromUserName}</strong> wants to be your friend</span>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <button class="accept-request-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">Accept</button>
+                    <button class="decline-request-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">Decline</button>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          </section>
+          ` : ''}
           <section>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <h3>${canEdit ? 'My ' : ''}Interests (${interests.length})</h3>
@@ -228,17 +248,39 @@ async function renderProfileData(currentUser, profile, canEdit) {
           }
         }
       })
+
+      document.querySelectorAll('.accept-request-btn').forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            await friendsApi.acceptRequest(btn.dataset.id)
+            window.location.reload()
+          } catch (err) { alert('Failed to accept request: ' + err.message) }
+        }
+      })
+
+      document.querySelectorAll('.decline-request-btn').forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            await friendsApi.declineRequest(btn.dataset.id)
+            window.location.reload()
+          } catch (err) { alert('Failed to decline request: ' + err.message) }
+        }
+      })
     } else {
       document.getElementById('friend-btn').onclick = async () => {
         try {
           if (isFriend) {
-            await friendsApi.remove({ userId: currentUser.id, friendId: profile.id })
+            if (confirm('Are you sure you want to remove this friend?')) {
+              await friendsApi.remove({ userId: currentUser.id, friendId: profile.id })
+              window.location.reload()
+            }
           } else {
-            await friendsApi.add({ userId: currentUser.id, friendId: profile.id })
+            await friendsApi.sendRequest({ fromUserId: currentUser.id, toUserId: profile.id })
+            alert('Friend request sent!')
+            window.location.reload()
           }
-          window.location.reload()
         } catch (err) {
-          alert('Failed to update friendship: ' + err.message)
+          alert('Error: ' + err.message)
         }
       }
     }

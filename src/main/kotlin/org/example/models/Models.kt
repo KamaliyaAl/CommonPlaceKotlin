@@ -64,6 +64,14 @@ data class FriendRelation(
 )
 
 @Serializable
+data class FriendRequest(
+    val id: String = "",
+    val fromUserId: String = "",
+    val toUserId: String = "",
+    val status: String = "PENDING" // PENDING, ACCEPTED, DECLINED
+)
+
+@Serializable
 data class FavouriteLocation(
     val id: String = "",
     val userId: String = "",

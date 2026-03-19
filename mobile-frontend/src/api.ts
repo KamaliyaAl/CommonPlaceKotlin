@@ -97,6 +97,47 @@ export const api = {
     return true;
   },
   
+  async getFriendRequests(userId: string) {
+    const response = await fetch(`${API_URL}/friend-requests/received/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch friend requests');
+    return await response.json();
+  },
+
+  async getOutgoingFriendRequests(userId: string) {
+    const response = await fetch(`${API_URL}/friend-requests/outgoing/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch outgoing friend requests');
+    return await response.json();
+  },
+
+  async sendFriendRequest(fromUserId: string, toUserId: string) {
+    const response = await fetch(`${API_URL}/friend-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromUserId, toUserId })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to send friend request');
+    }
+    return await response.json();
+  },
+
+  async acceptFriendRequest(requestId: string) {
+    const response = await fetch(`${API_URL}/friend-requests/${requestId}/accept`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Failed to accept friend request');
+    return true;
+  },
+
+  async declineFriendRequest(requestId: string) {
+    const response = await fetch(`${API_URL}/friend-requests/${requestId}/decline`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Failed to decline friend request');
+    return true;
+  },
+  
   async getInterests() {
     const response = await fetch(`${API_URL}/interests`);
     if (!response.ok) throw new Error('Failed to fetch interests');

@@ -27,6 +27,8 @@ export default function ProfileScreen() {
   const [fetchingUser, setFetchingUser] = useState(false);
   const [friends, setFriends] = useState<any[]>([]);
   const [userInterests, setUserInterests] = useState<any[]>([]);
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [hasSentRequest, setHasSentRequest] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [editInterestsVisible, setEditInterestsVisible] = useState(false);
@@ -44,8 +46,31 @@ export default function ProfileScreen() {
       const id = userId || currentUser?.uid || "";
       fetchFriends(id);
       fetchInterests(id);
+      if (isMe) {
+        fetchFriendRequests(id);
+      } else if (currentUser) {
+        fetchOutgoingRequests(currentUser.uid);
+      }
     }
-  }, [userId, currentUser]);
+  }, [userId, currentUser, isMe]);
+
+  const fetchOutgoingRequests = async (myId: string) => {
+    try {
+      const data = await api.getOutgoingFriendRequests(myId);
+      setHasSentRequest(data.some((r: any) => r.toUserId === userId));
+    } catch (err) {
+      console.error("Failed to fetch outgoing requests:", err);
+    }
+  };
+
+  const fetchFriendRequests = async (id: string) => {
+    try {
+      const data = await api.getFriendRequests(id);
+      setFriendRequests(data);
+    } catch (err) {
+      console.error("Failed to fetch friend requests:", err);
+    }
+  };
 
   const fetchInterests = async (id: string) => {
     try {
@@ -77,11 +102,35 @@ export default function ProfileScreen() {
   const handleAddFriend = async () => {
     if (!currentUser || !userId) return;
     try {
-      await api.addFriend(currentUser.uid, userId);
-      setIsFriend(true);
-      fetchFriends(userId);
+      await api.sendFriendRequest(currentUser.uid, userId);
+      setHasSentRequest(true);
+      alert("Friend request sent!");
+    } catch (err: any) {
+      console.error("Failed to send friend request:", err);
+      alert(err.message || "Failed to send friend request");
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await api.acceptFriendRequest(requestId);
+      if (currentUser) {
+        fetchFriends(currentUser.uid);
+        fetchFriendRequests(currentUser.uid);
+      }
     } catch (err) {
-      console.error("Failed to add friend:", err);
+      console.error("Failed to accept request:", err);
+    }
+  };
+
+  const handleDeclineRequest = async (requestId: string) => {
+    try {
+      await api.declineFriendRequest(requestId);
+      if (currentUser) {
+        fetchFriendRequests(currentUser.uid);
+      }
+    } catch (err) {
+      console.error("Failed to decline request:", err);
     }
   };
 
@@ -234,14 +283,48 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ) : currentUser ? (
               <TouchableOpacity 
-                style={[s.editSmall, isFriend && { backgroundColor: "#7FA6FF" }]} 
-                onPress={isFriend ? handleRemoveFriend : handleAddFriend}
+                style={[
+                  s.editSmall, 
+                  isFriend && { backgroundColor: "#dc3545" },
+                  hasSentRequest && !isFriend && { backgroundColor: "#6c757d" }
+                ]} 
+                onPress={isFriend ? handleRemoveFriend : (hasSentRequest ? undefined : handleAddFriend)}
+                disabled={hasSentRequest && !isFriend}
               >
-                <Text style={s.editSmallText}>{isFriend ? "Remove friend" : "Add Friend"}</Text>
+                <Text style={s.editSmallText}>
+                  {isFriend ? "Remove friend" : (hasSentRequest ? "Request Sent" : "Send Friend Request")}
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
         </View>
+
+        {isMe && friendRequests.length > 0 && (
+          <View style={s.requestsSection}>
+            <Text style={s.sectionTitle}>Friend Requests ({friendRequests.length})</Text>
+            {friendRequests.map((req) => (
+              <View key={req.id} style={s.requestItem}>
+                <Text style={s.requestText}>
+                  <Text style={{ fontWeight: "bold" }}>{req.fromUserName}</Text> wants to be friends
+                </Text>
+                <View style={s.requestBtns}>
+                  <TouchableOpacity 
+                    style={[s.reqBtn, s.acceptBtn]} 
+                    onPress={() => handleAcceptRequest(req.id)}
+                  >
+                    <Text style={s.reqBtnText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[s.reqBtn, s.declineBtn]} 
+                    onPress={() => handleDeclineRequest(req.id)}
+                  >
+                    <Text style={s.reqBtnText}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={s.tabsRow}>
           <TouchableOpacity 
@@ -374,6 +457,14 @@ const s = StyleSheet.create({
   friends: { width: 120, alignItems: "flex-start" },
   circles: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   circle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#ddd", borderWidth: 2, borderColor: "#fff" },
+  requestsSection: { marginTop: 20, padding: 12, backgroundColor: "#FFF9E6", borderRadius: 16, borderWeight: 1, borderColor: "#FFEBA0" },
+  requestItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "#FFEBA0" },
+  requestText: { flex: 1, fontSize: 14 },
+  requestBtns: { flexDirection: "row", gap: 8 },
+  reqBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+  acceptBtn: { backgroundColor: "#28a745" },
+  declineBtn: { backgroundColor: "#dc3545" },
+  reqBtnText: { color: "white", fontSize: 12, fontWeight: "700" },
   blackBtn: { backgroundColor: "black", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, alignItems: "center" },
   blackBtnText: { color: "white", fontWeight: "800" },
 });

@@ -87,6 +87,11 @@ export const friendsApi = {
   getByUser: (userId) => request(`/friends/${userId}`),
   add: (relation) => request('/friends', { method: 'POST', body: JSON.stringify(relation) }),
   remove: (relation) => request('/friends', { method: 'DELETE', body: JSON.stringify(relation) }),
+  getReceivedRequests: (userId) => request(`/friend-requests/received/${userId}`),
+  getOutgoingRequests: (userId) => request(`/friend-requests/outgoing/${userId}`),
+  sendRequest: (requestData) => request('/friend-requests', { method: 'POST', body: JSON.stringify(requestData) }),
+  acceptRequest: (requestId) => request(`/friend-requests/${requestId}/accept`, { method: 'POST' }),
+  declineRequest: (requestId) => request(`/friend-requests/${requestId}/decline`, { method: 'POST' }),
 }
 
 // Favourite Events
