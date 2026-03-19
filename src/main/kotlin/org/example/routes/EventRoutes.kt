@@ -22,7 +22,8 @@ fun Route.eventRoutes() {
                         description = doc.getString("description"),
                         geopositionId = doc.getString("geopositionId"),
                         organizerId = doc.getString("organizerId"),
-                        time = doc.getString("time")
+                        time = doc.getString("time"),
+                        price = doc.getString("price")
                     )
                 }
             }
@@ -44,7 +45,8 @@ fun Route.eventRoutes() {
                         description = doc.getString("description"),
                         geopositionId = doc.getString("geopositionId"),
                         organizerId = doc.getString("organizerId"),
-                        time = doc.getString("time")
+                        time = doc.getString("time"),
+                        price = doc.getString("price")
                     )
                 }
             }
@@ -64,7 +66,8 @@ fun Route.eventRoutes() {
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,
                 "organizerId" to event.organizerId,
-                "time" to event.time
+                "time" to event.time,
+                "price" to event.price
             )
             withLogging("POST event") {
                 docRef.set(data).get()
@@ -83,7 +86,8 @@ fun Route.eventRoutes() {
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,
                 "organizerId" to event.organizerId,
-                "time" to event.time
+                "time" to event.time,
+                "price" to event.price
             )
             withLogging("PUT event $id") {
                 FirebaseService.firestore.collection(collection).document(id).set(data).get()

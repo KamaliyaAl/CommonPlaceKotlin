@@ -45,7 +45,7 @@ export default function UsersListScreen() {
         <Text style={s.name}>{item.name}</Text>
         <Text style={s.email}>{item.email}</Text>
       </View>
-      <Text style={s.arrow}>></Text>
+      <Text style={s.arrow}>{">"}</Text>
     </TouchableOpacity>
   );
 

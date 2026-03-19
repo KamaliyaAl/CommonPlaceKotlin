@@ -11,4 +11,5 @@ export type Place = {
   category: Category;
   date: string; // ISO format "YYYY-MM-DD"
   imageUri?: string | null;
+  price?: string | null;
 };

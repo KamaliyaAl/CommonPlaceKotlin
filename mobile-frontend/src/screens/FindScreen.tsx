@@ -19,13 +19,14 @@ type EventItem = {
   rating: number;
   reviews: number;
   liked: boolean;
+  price?: string | null;
 };
 
 const MOCK: EventItem[] = [
-  { id: "1", title: "Beach Club ABOBA", desc: "Short description what is going on", rating: 4.8, reviews: 101, liked: false },
-  { id: "2", title: "Sport ABOBA", desc: "Short description what is going on", rating: 2.1, reviews: 10, liked: false },
-  { id: "3", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.9, reviews: 101, liked: true },
-  { id: "4", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.0, reviews: 1, liked: false },
+  { id: "1", title: "Beach Club ABOBA", desc: "Short description what is going on", rating: 4.8, reviews: 101, liked: false, price: "10€" },
+  { id: "2", title: "Sport ABOBA", desc: "Short description what is going on", rating: 2.1, reviews: 10, liked: false, price: "Free" },
+  { id: "3", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.9, reviews: 101, liked: true, price: null },
+  { id: "4", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.0, reviews: 1, liked: false, price: "5€" },
 ];
 
 const DAYS = [
@@ -117,7 +118,12 @@ export default function FindScreen() {
             <View style={s.thumb} />
 
             <View style={s.cardBody}>
-              <Text style={s.cardTitle}>{item.title}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={s.cardTitle}>{item.title}</Text>
+                {item.price && (
+                  <Text style={{ fontWeight: '800', color: '#3B7D7A', fontSize: 14 }}>{item.price}</Text>
+                )}
+              </View>
               <Text style={s.cardDesc}>{item.desc}</Text>
 
               <View style={s.cardBottomRow}>

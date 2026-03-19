@@ -393,6 +393,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity 
                   key={idx} 
                   style={s.friendItem}
+                  // @ts-ignore
                   onPress={() => navigation.navigate("UserProfile", { userId: f.id })}
                 >
                   <View style={s.friendAvatar} />
@@ -457,7 +458,7 @@ const s = StyleSheet.create({
   friends: { width: 120, alignItems: "flex-start" },
   circles: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   circle: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#ddd", borderWidth: 2, borderColor: "#fff" },
-  requestsSection: { marginTop: 20, padding: 12, backgroundColor: "#FFF9E6", borderRadius: 16, borderWeight: 1, borderColor: "#FFEBA0" },
+  requestsSection: { marginTop: 20, padding: 12, backgroundColor: "#FFF9E6", borderRadius: 16, borderWidth: 1, borderColor: "#FFEBA0" },
   requestItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "#FFEBA0" },
   requestText: { flex: 1, fontSize: 14 },
   requestBtns: { flexDirection: "row", gap: 8 },

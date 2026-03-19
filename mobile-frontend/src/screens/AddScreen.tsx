@@ -55,6 +55,7 @@ export default function AddScreen() {
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<Category>("other");
     const [selectedDate, setSelectedDate] = useState<string>(days[0]);
+    const [price, setPrice] = useState("");
     const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
     const [imageUri, setImageUri] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ export default function AddScreen() {
                 lng: coord.lng,
                 category,
                 date: selectedDate,
+                price: price.trim() || null,
                 rating: undefined,
                 reviewsCount: undefined,
                 imageUri,
@@ -168,6 +170,16 @@ export default function AddScreen() {
                         />
                     </View>
 
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>Price (optional)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={price}
+                            onChangeText={setPrice}
+                            placeholder="Free"
+                        />
+                    </View>
+
                     {/* Category chips */}
                     <View style={{ marginBottom: 14 }}>
                         <Text style={styles.sectionTitle}>Category</Text>
@@ -201,13 +213,16 @@ export default function AddScreen() {
                         <Text style={styles.sectionTitle}>Place location</Text>
                         <Pressable 
                             style={styles.mapPickerPlaceholder} 
-                            onPress={() => navigation.navigate("LocationPicker", {
-                                initialLat: coord?.lat,
-                                initialLng: coord?.lng,
-                                onSelect: (res: { latitude: number; longitude: number }) => {
-                                    setCoord({ lat: res.latitude, lng: res.longitude });
-                                }
-                            })}
+                            onPress={() => {
+                                // @ts-ignore
+                                navigation.navigate("LocationPicker", {
+                                    initialLat: coord?.lat,
+                                    initialLng: coord?.lng,
+                                    onSelect: (res: { latitude: number; longitude: number }) => {
+                                        setCoord({ lat: res.latitude, lng: res.longitude });
+                                    }
+                                });
+                            }}
                         >
                             <MaterialCommunityIcons name="map-marker-plus" size={32} color="#8AAFB1" />
                             <Text style={styles.mapPickerText}>
@@ -366,6 +381,22 @@ const styles = StyleSheet.create({
         height: 160,
         borderRadius: 16,
         overflow: "hidden",
+    },
+    mapPickerPlaceholder: {
+        width: "100%",
+        paddingVertical: 20,
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: "#8AAFB1",
+        borderStyle: "dashed",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    mapPickerText: {
+        marginTop: 8,
+        color: "#8AAFB1",
+        fontWeight: "600",
     },
     hintText: {
         color: "#6A6A6A",

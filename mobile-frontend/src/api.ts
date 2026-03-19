@@ -9,7 +9,7 @@ export const api = {
     // Fetch geopositions to get lat/lng
     const geoResponse = await fetch(`${API_URL}/geopositions`);
     const geopositions = geoResponse.ok ? await geoResponse.json() : [];
-    const geoMap = new Map(geopositions.map((g: any) => [g.id, g]));
+    const geoMap = new Map<string, any>(geopositions.map((g: any) => [g.id, g]));
 
     return events.map((e: any) => {
       const geo = geoMap.get(e.geopositionId);
@@ -22,7 +22,8 @@ export const api = {
         category: 'other', // Default as Ktor doesn't have category yet
         date: e.time || new Date().toISOString().split('T')[0],
         rating: 4.5,
-        reviewsCount: 0
+        reviewsCount: 0,
+        price: e.price
       };
     });
   },
@@ -48,7 +49,8 @@ export const api = {
         description: event.description,
         geopositionId: geo.id,
         time: event.date,
-        organizerId: 'user1' // Dummy for now
+        organizerId: 'user1', // Dummy for now
+        price: event.price
       })
     });
     const newEvent = await eventResponse.json();

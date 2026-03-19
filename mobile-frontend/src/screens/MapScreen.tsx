@@ -233,6 +233,13 @@ export default function MapScreen() {
                                     {CATEGORY_LABEL[selected.category]}
                                 </Text>
                             </View>
+                            {selected.price && (
+                                <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: "#E6F4F1" }]}>
+                                    <Text style={[styles.categoryBadgeText, { color: "#3B7D7A" }]}>
+                                        {selected.price}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 )}
