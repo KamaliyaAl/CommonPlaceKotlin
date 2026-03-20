@@ -13,14 +13,21 @@ export const api = {
 
     return events.map((e: any) => {
       const geo = geoMap.get(e.geopositionId);
+      // Extract date part from startTime if it exists
+      const datePart = e.startTime && e.startTime.includes('T') 
+        ? e.startTime.split('T')[0] 
+        : (e.startTime || new Date().toISOString().split('T')[0]);
+
       return {
         id: e.id,
         title: e.name || 'No title',
         description: e.description || '',
         lat: geo?.latitude || 0,
         lng: geo?.longitude || 0,
-        category: 'other', // Default as Ktor doesn't have category yet
-        date: e.time || new Date().toISOString().split('T')[0],
+        category: e.category || 'other',
+        date: datePart,
+        startTime: e.startTime,
+        endTime: e.endTime,
         rating: 4.5,
         reviewsCount: 0,
         price: e.price
@@ -48,7 +55,9 @@ export const api = {
         name: event.title,
         description: event.description,
         geopositionId: geo.id,
-        time: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        category: event.category,
         organizerId: 'user1', // Dummy for now
         price: event.price
       })

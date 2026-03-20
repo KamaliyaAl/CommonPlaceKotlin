@@ -10,6 +10,9 @@ export type Place = {
   lng: number;
   category: Category;
   date: string; // ISO format "YYYY-MM-DD"
+  startTime?: string | null;
+  endTime?: string | null;
   imageUri?: string | null;
   price?: string | null;
+  liked?: boolean;
 };

@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useEvents } from "../context/EventsContext";
+import { Place } from "../types";
 
 type EventItem = {
   id: string;
@@ -48,16 +50,32 @@ function DayPill({ d, n, active }: { d: string; n: number; active?: boolean }) {
   );
 }
 
+const formatTime = (isoString?: string | null) => {
+  if (!isoString) return "?";
+  if (!isoString.includes("T")) return isoString;
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch (e) {
+    return isoString;
+  }
+};
+
 export default function FindScreen() {
   const navigation = useNavigation<any>();
+  const { events } = useEvents();
   const [query, setQuery] = useState("");
   const [activeDay, setActiveDay] = useState(0);
 
   const data = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return MOCK;
-    return MOCK.filter((x) => x.title.toLowerCase().includes(q));
-  }, [query]);
+    if (!q) return events;
+    return events.filter((x) => 
+        x.title.toLowerCase().includes(q) || 
+        x.description.toLowerCase().includes(q)
+    );
+  }, [query, events]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -121,17 +139,22 @@ export default function FindScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Text style={s.cardTitle}>{item.title}</Text>
                 {item.price && (
-                  <Text style={{ fontWeight: '800', color: '#3B7D7A', fontSize: 14 }}>{item.price}</Text>
+                  <Text style={{ fontWeight: '800', color: '#3B7D7A', fontSize: 14 }}>{item.price}€</Text>
                 )}
               </View>
-              <Text style={s.cardDesc}>{item.desc}</Text>
+              {(item.startTime || item.endTime) && (
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                  {formatTime(item.startTime)} - {formatTime(item.endTime)}
+                </Text>
+              )}
+              <Text style={s.cardDesc}>{item.description}</Text>
 
               <View style={s.cardBottomRow}>
                 <Text style={s.mapText}>Show on the map</Text>
 
                 <View style={s.ratingWrap}>
                   <Text style={s.ratingText}>
-                    {item.rating.toFixed(1)} ({item.reviews} review{item.reviews === 1 ? "" : "s"})
+                    {(item.rating || 0).toFixed(1)} ({(item.reviewsCount || 0)} review{(item.reviewsCount || 0) === 1 ? "" : "s"})
                   </Text>
                   <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
                 </View>

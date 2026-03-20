@@ -54,7 +54,10 @@ export default function AddScreen() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<Category>("other");
-    const [selectedDate, setSelectedDate] = useState<string>(days[0]);
+    const [startDate, setStartDate] = useState<string>(days[0]);
+    const [endDate, setEndDate] = useState<string>(days[0]);
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
     const [price, setPrice] = useState("");
     const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
     const [imageUri, setImageUri] = useState<string | null>(null);
@@ -92,6 +95,22 @@ export default function AddScreen() {
         if (!description.trim()) return Alert.alert("Validation", "Please enter description");
         if (!coord) return Alert.alert("Validation", "Please select a place on the map");
 
+        // Simple validation for time format HH:mm
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (startTime && !timeRegex.test(startTime.trim())) {
+            return Alert.alert("Validation", "Start time should be in HH:mm format (e.g. 18:00)");
+        }
+        if (endTime && !timeRegex.test(endTime.trim())) {
+            return Alert.alert("Validation", "End time should be in HH:mm format (e.g. 21:00)");
+        }
+
+        const startTimestamp = startTime.trim() 
+            ? `${startDate}T${startTime.trim()}:00Z` 
+            : `${startDate}T00:00:00Z`;
+        const endTimestamp = endTime.trim() 
+            ? `${endDate}T${endTime.trim()}:00Z` 
+            : `${endDate}T23:59:59Z`;
+
         try {
             const created = await addEvent({
                 title: name.trim(),
@@ -99,7 +118,9 @@ export default function AddScreen() {
                 lat: coord.lat,
                 lng: coord.lng,
                 category,
-                date: selectedDate,
+                date: startDate,
+                startTime: startTimestamp,
+                endTime: endTimestamp,
                 price: price.trim() || null,
                 rating: undefined,
                 reviewsCount: undefined,
@@ -108,13 +129,16 @@ export default function AddScreen() {
 
             // Navigate to Map and focus selected date
             // @ts-ignore - bottom tabs accept params
-            navigation.navigate("Map", { date: selectedDate });
+            navigation.navigate("Map", { date: startDate });
             Alert.alert("Created", "Your event has been created");
             // reset form optionally
             setName("");
             setDescription("");
             setCategory("other");
-            setSelectedDate(days[0]);
+            setStartDate(days[0]);
+            setEndDate(days[0]);
+            setStartTime("");
+            setEndTime("");
             setCoord(null);
             setImageUri(null);
         } catch (e) {
@@ -123,14 +147,14 @@ export default function AddScreen() {
         }
     };
 
-    const renderCalendarDay = ({ item }: { item: string }) => {
+    const renderCalendarDay = (item: string, current: string, onSelect: (val: string) => void) => {
         const d = new Date(item);
         const dayNum = d.getDate();
         const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
-        const isActive = item === selectedDate;
+        const isActive = item === current;
 
         return (
-            <Pressable onPress={() => setSelectedDate(item)} style={[styles.dayItem, isActive && styles.dayItemActive]}>
+            <Pressable key={item} onPress={() => onSelect(item)} style={[styles.dayItem, isActive && styles.dayItemActive]}>
                 <Text style={[styles.dayWeekday, isActive && styles.dayTextActive]}>{weekday}</Text>
                 <Text style={[styles.dayNumber, isActive && styles.dayTextActive]}>{dayNum}</Text>
             </Pressable>
@@ -171,7 +195,7 @@ export default function AddScreen() {
                     </View>
 
                     <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Price (optional)</Text>
+                        <Text style={styles.label}>Price (€) (optional)</Text>
                         <TextInput
                             style={styles.input}
                             value={price}
@@ -195,17 +219,45 @@ export default function AddScreen() {
                         </View>
                     </View>
 
-                    {/* Date calendar */}
+                    {/* Date calendars */}
                     <View style={{ marginBottom: 16 }}>
-                        <Text style={styles.sectionTitle}>Date</Text>
+                        <Text style={styles.sectionTitle}>Start Date & Time</Text>
                         <FlatList
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             data={days}
                             keyExtractor={(item) => item}
-                            renderItem={renderCalendarDay}
+                            renderItem={({ item }) => renderCalendarDay(item, startDate, setStartDate)}
                             contentContainerStyle={styles.calendarList}
                         />
+                        <View style={[styles.inputWrapper, { marginTop: 10 }]}>
+                            <TextInput
+                                style={styles.input}
+                                value={startTime}
+                                onChangeText={setStartTime}
+                                placeholder="Start Time (e.g. 18:00)"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={{ marginBottom: 16 }}>
+                        <Text style={styles.sectionTitle}>End Date & Time</Text>
+                        <FlatList
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            data={days}
+                            keyExtractor={(item) => item}
+                            renderItem={({ item }) => renderCalendarDay(item, endDate, setEndDate)}
+                            contentContainerStyle={styles.calendarList}
+                        />
+                        <View style={[styles.inputWrapper, { marginTop: 10 }]}>
+                            <TextInput
+                                style={styles.input}
+                                value={endTime}
+                                onChangeText={setEndTime}
+                                placeholder="End Time (e.g. 21:00)"
+                            />
+                        </View>
                     </View>
 
                     {/* Map picker */}
@@ -284,6 +336,10 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         width: "100%",
+    },
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
     },
     inputWrapper: {
         marginBottom: 20,

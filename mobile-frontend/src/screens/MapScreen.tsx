@@ -43,6 +43,18 @@ const getDaysArray = () => {
     return days;
 };
 
+const formatTime = (isoString?: string | null) => {
+    if (!isoString) return "?";
+    if (!isoString.includes("T")) return isoString; // Old format
+    try {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch (e) {
+        return isoString;
+    }
+};
+
 export default function MapScreen() {
     const days = useMemo(() => getDaysArray(), []);
     const [selectedDate, setSelectedDate] = useState(days[0]);
@@ -236,7 +248,14 @@ export default function MapScreen() {
                             {selected.price && (
                                 <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: "#E6F4F1" }]}>
                                     <Text style={[styles.categoryBadgeText, { color: "#3B7D7A" }]}>
-                                        {selected.price}
+                                        {selected.price}€
+                                    </Text>
+                                </View>
+                            )}
+                            {(selected.startTime || selected.endTime) && (
+                                <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: "#F0E6FF" }]}>
+                                    <Text style={[styles.categoryBadgeText, { color: "#6B3B7D" }]}>
+                                        {formatTime(selected.startTime)} - {formatTime(selected.endTime)}
                                     </Text>
                                 </View>
                             )}
