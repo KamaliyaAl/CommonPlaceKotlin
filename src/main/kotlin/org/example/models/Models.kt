@@ -31,6 +31,7 @@ data class Event(
     val price: String? = null,
     val category: String? = null,
     val time: String? = null,
+    val imageUri: String? = null,
 )
 
 @Serializable

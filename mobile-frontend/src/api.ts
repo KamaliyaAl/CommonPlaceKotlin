@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
-  async getEvents(filters?: { query?: string; categories?: string[]; date?: string }) {
+  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string }) {
     let url = `${API_URL}/events`;
     if (filters) {
       const params = new URLSearchParams();
@@ -10,6 +10,8 @@ export const api = {
         params.append('category', filters.categories.join(','));
       }
       if (filters.date) params.append('date', filters.date);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
     }
@@ -41,7 +43,8 @@ export const api = {
         endTime: e.endTime,
         rating: 4.5,
         reviewsCount: 0,
-        price: e.price
+        price: e.price,
+        imageUri: e.imageUri || null,
       };
     });
   },
@@ -70,7 +73,8 @@ export const api = {
         endTime: event.endTime,
         category: event.category,
         organizerId: 'user1', // Dummy for now
-        price: event.price
+        price: event.price,
+        imageUri: event.imageUri
       })
     });
     const newEvent = await eventResponse.json();

@@ -36,24 +36,30 @@ class EventSearchIntegrationTest {
 
         val testMarker = "TEST_SEARCH_${System.currentTimeMillis()}"
 
-        // Create mock events
+        // Create mock events with prices
         val event1 = Event(
             name = "$testMarker Beach Party",
             description = "Fun in the sun",
             category = "nature",
-            startTime = "2026-05-10T14:00:00Z"
+            startTime = "2026-05-10T14:00:00Z",
+            price = "15", // €
+            imageUri = "http://test.com/img1.jpg"
         )
         val event2 = Event(
             name = "$testMarker Board Games",
             description = "Indoor fun",
             category = "culture",
-            startTime = "2026-05-11T18:00:00Z"
+            startTime = "2026-05-11T18:00:00Z",
+            price = "5", // €
+            imageUri = "http://test.com/img2.jpg"
         )
         val event3 = Event(
             name = "$testMarker Sports Day",
             description = "Outdoor sports event full of fun",
             category = "sport",
-            startTime = "2026-05-10T09:00:00Z"
+            startTime = "2026-05-10T09:00:00Z",
+            price = "40", // €
+            imageUri = "http://test.com/img3.jpg"
         )
 
         val id1 = client.post("/api/events") { contentType(ContentType.Application.Json); setBody(event1) }.body<Event>().id
@@ -66,6 +72,8 @@ class EventSearchIntegrationTest {
             assertEquals(HttpStatusCode.OK, allRes.status)
             val allEvents = allRes.body<List<Event>>()
             assertEquals(3, allEvents.size)
+            assertEquals("nature", allEvents.find { it.id == id1 }?.category)
+            assertEquals("http://test.com/img1.jpg", allEvents.find { it.id == id1 }?.imageUri)
 
             // 2. Test filter by category
             val catRes = client.get("/api/events?query=$testMarker&category=nature")
@@ -80,14 +88,23 @@ class EventSearchIntegrationTest {
             assertTrue(multiCatEvents.any { it.id == id1 })
             assertTrue(multiCatEvents.any { it.id == id2 })
 
-            // 4. Test filter by date substring
+            // 4. Test filter by price range (Max 20)
+            val maxPriceRes = client.get("/api/events?query=$testMarker&maxPrice=20")
+            val maxPriceEvents = maxPriceRes.body<List<Event>>()
+            // Should find event1 (15€), event2 (5€), and any event without price (if we had one in this test)
+            // But let's verify our specific test events:
+            assertTrue(maxPriceEvents.any { it.id == id1 })
+            assertTrue(maxPriceEvents.any { it.id == id2 })
+            assertTrue(maxPriceEvents.none { it.id == id3 }) // event3 is 40€
+
+            // 5. Test filter by date substring
             val dateRes = client.get("/api/events?query=$testMarker&date=2026-05-10")
             val dateEvents = dateRes.body<List<Event>>()
             assertEquals(2, dateEvents.size)
             assertTrue(dateEvents.any { it.id == id1 })
             assertTrue(dateEvents.any { it.id == id3 })
 
-            // 4. Test text search (case insensitive in description)
+            // 6. Test filter by text search (case insensitive in description)
             val textRes = client.get("/api/events?query=indoor")
             val textEvents = textRes.body<List<Event>>()
             // It should at least find event2 since it has 'indoor'

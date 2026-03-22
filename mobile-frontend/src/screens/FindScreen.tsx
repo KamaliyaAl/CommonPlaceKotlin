@@ -8,6 +8,12 @@ import {
   TouchableOpacity,
   FlatList,
   ScrollView,
+  Modal,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -73,22 +79,50 @@ export default function FindScreen() {
   const days = useMemo(() => getDaysArray(), []);
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+  const [maxPrice, setMaxPrice] = useState("");
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
+
+  // Internal states for the modal
+  const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
+  const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
   const handleCategoryPress = (val: string) => {
     if (val === "all") {
-      setActiveCategories(["all"]);
+      setPendingCategories(["all"]);
       return;
     }
     
-    let newCats = activeCategories.includes("all") ? [] : [...activeCategories];
+    let newCats = pendingCategories.includes("all") ? [] : [...pendingCategories];
     if (newCats.includes(val)) {
       newCats = newCats.filter(c => c !== val);
       if (newCats.length === 0) newCats = ["all"];
     } else {
       newCats.push(val);
     }
-    setActiveCategories(newCats);
+    setPendingCategories(newCats);
+  };
+
+  const applyFilters = () => {
+    setActiveCategories(pendingCategories);
+    setMaxPrice(pendingMaxPrice);
+    setIsFilterVisible(false);
+  };
+
+  const resetFilters = () => {
+    setPendingCategories(["all"]);
+    setPendingMaxPrice("");
+    // We can also immediately reset active filters or let the user click 'Apply'
+    setActiveCategories(["all"]);
+    setMaxPrice("");
+    setIsFilterVisible(false);
+  };
+
+  // Sync pending state when modal opens
+  const openModal = () => {
+    setPendingCategories(activeCategories);
+    setPendingMaxPrice(maxPrice);
+    setIsFilterVisible(true);
   };
 
   React.useEffect(() => {
@@ -97,20 +131,19 @@ export default function FindScreen() {
         const res = await api.getEvents({
           query,
           categories: activeCategories,
-          date: activeDate || undefined
+          date: activeDate || undefined,
+          maxPrice: maxPrice || undefined
         });
         setFilteredEvents(res);
       } catch (e) {
         console.error(e);
       }
     };
-    // Fetch immediately, but in a real app you might want to debounce the query.
-    // For simplicity, we fetch every time the state changes.
     const delayDebounceFn = setTimeout(() => {
       fetchFiltered();
-    }, 300); // 300ms debounce
+    }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [query, activeCategories, activeDate]);
+  }, [query, activeCategories, activeDate, maxPrice]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -145,22 +178,15 @@ export default function FindScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Categories */}
-      <View style={{ marginTop: 14 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
-          {CATEGORIES.map(c => (
-            <TouchableOpacity 
-              key={c.value} 
-              onPress={() => handleCategoryPress(c.value)}
-              style={[s.catPill, activeCategories.includes(c.value) && s.catPillActive]}
-            >
-              <Text style={[s.catText, activeCategories.includes(c.value) && s.catTextActive]}>
-                {c.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* Filters Toggle */}
+      <TouchableOpacity 
+        style={s.filtersToggle} 
+        onPress={openModal}
+      >
+        <MaterialCommunityIcons name="tune" size={20} color="#fff" />
+        <Text style={s.filtersToggleText}>Filters {activeCategories.filter(c => c !== 'all').length > 0 ? `(${activeCategories.filter(c => c !== 'all').length})` : ""}</Text>
+      </TouchableOpacity>
+
 
       {/* список событий */}
       <FlatList
@@ -179,7 +205,11 @@ export default function FindScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={s.thumb} />
+            {item.imageUri ? (
+              <Image source={{ uri: item.imageUri }} style={s.thumb} />
+            ) : (
+              <View style={s.thumb} />
+            )}
 
             <View style={s.cardBody}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -214,6 +244,79 @@ export default function FindScreen() {
       <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
         <Text style={s.backText}>Back</Text>
       </TouchableOpacity>
+
+      {/* FILTER MODAL */}
+      <Modal
+        visible={isFilterVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsFilterVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={s.modalOverlay}
+        >
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={Keyboard.dismiss} 
+          />
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
+                <MaterialCommunityIcons name="close" size={28} color="#111" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={s.filterLabel}>Categories</Text>
+              <View style={s.catGrid}>
+                {CATEGORIES.map(c => (
+                  <TouchableOpacity 
+                    key={c.value} 
+                    onPress={() => handleCategoryPress(c.value)}
+                    style={[s.catPill, pendingCategories.includes(c.value) && s.catPillActive, { marginBottom: 8, marginRight: 8 }]}
+                  >
+                    <Text style={[s.catText, pendingCategories.includes(c.value) && s.catTextActive]}>
+                      {c.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[s.filterLabel, { marginTop: 20 }]}>Max Price (€)</Text>
+              <View style={s.priceRow}>
+                <TextInput
+                  style={s.priceInput}
+                  placeholder="Max Budget"
+                  value={pendingMaxPrice}
+                  onChangeText={setPendingMaxPrice}
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+
+              <TouchableOpacity 
+                style={s.applyBtn}
+                onPress={applyFilters}
+              >
+                <Text style={s.applyText}>Apply Filters</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={s.resetBtn}
+                onPress={resetFilters}
+              >
+                <Text style={s.resetText}>Reset All</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -275,6 +378,99 @@ const s = StyleSheet.create({
   },
   catTextActive: {
     color: "#fff",
+  },
+
+  filtersToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111',
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    gap: 8,
+  },
+  filtersToggleText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111',
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 12,
+  },
+  catGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  priceInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  priceDash: {
+    fontSize: 18,
+    color: '#888',
+  },
+  applyBtn: {
+    backgroundColor: '#111',
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 32,
+  },
+  applyText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  resetBtn: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingBottom: 20,
+  },
+  resetText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
 
   listContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 90 },

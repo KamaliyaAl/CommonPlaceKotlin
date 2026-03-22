@@ -42,7 +42,8 @@ fun Route.eventRoutes() {
             startTime = getStringOrTimestamp("startTime"),
             endTime = getStringOrTimestamp("endTime"),
             price = doc.getString("price"),
-            category = doc.getString("category")
+            category = doc.getString("category"),
+            imageUri = doc.getString("imageUri")
         )
     }
 
@@ -70,6 +71,7 @@ fun Route.eventRoutes() {
             
             val date = call.request.queryParameters["date"] // Expected format like YYYY-MM-DD
             val queryParam = call.request.queryParameters["query"]?.lowercase()
+            val maxPrice = call.request.queryParameters["maxPrice"]?.toDoubleOrNull()
 
             val events = withLogging("GET filtered events") {
                 var firestoreQuery: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
@@ -94,6 +96,19 @@ fun Route.eventRoutes() {
                     filtered = filtered.filter { 
                         it.name?.lowercase()?.contains(queryParam) == true || 
                         it.description?.lowercase()?.contains(queryParam) == true 
+                    }
+                }
+                
+                // In-memory filter for price: always show if no price, otherwise check maxPrice
+                if (maxPrice != null) {
+                    filtered = filtered.filter {
+                        val priceStr = it.price
+                        if (priceStr.isNullOrBlank()) {
+                            true // No price = always show
+                        } else {
+                            val priceVal = Regex("[0-9.]+").find(priceStr)?.value?.toDoubleOrNull() ?: 0.0
+                            priceVal <= maxPrice
+                        }
                     }
                 }
                 
@@ -133,7 +148,8 @@ fun Route.eventRoutes() {
                 "startTime" to event.startTime?.toTimestamp(),
                 "endTime" to event.endTime?.toTimestamp(),
                 "price" to event.price,
-                "category" to event.category
+                "category" to event.category,
+                "imageUri" to event.imageUri
             )
             withLogging("POST event") {
                 docRef.set(data).get()
@@ -155,7 +171,8 @@ fun Route.eventRoutes() {
                 "startTime" to event.startTime?.toTimestamp(),
                 "endTime" to event.endTime?.toTimestamp(),
                 "price" to event.price,
-                "category" to event.category
+                "category" to event.category,
+                "imageUri" to event.imageUri
             )
             withLogging("PUT event $id") {
                 FirebaseService.firestore.collection(collection).document(id).set(data).get()
