@@ -12,6 +12,7 @@ import {
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { locationStore } from "../store/locationStore";
 
 const LIMASSOL: Region = {
   latitude: 34.7071,
@@ -49,11 +50,8 @@ export default function LocationPickerScreen() {
     const longitude = parseFloat(lng);
     if (isNaN(latitude) || isNaN(longitude)) return;
 
-    navigation.navigate({
-      name: 'AddMain',
-      params: { selectedLocation: { latitude, longitude } },
-      merge: true,
-    });
+    locationStore.selected = { latitude, longitude };
+    navigation.goBack();
   };
 
   // Sync marker when inputs change

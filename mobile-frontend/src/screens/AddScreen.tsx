@@ -14,9 +14,10 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
-import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect } from "react";
+import { useIsFocused, useNavigation, useRoute } from "@react-navigation/native";
 import { useEvents } from "../context/EventsContext";
+import { locationStore } from "../store/locationStore";
 import { Category } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -54,6 +55,7 @@ const getDaysArray = () => {
 export default function AddScreen() {
     const days = useMemo(() => getDaysArray(), []);
     const navigation = useNavigation<NativeStackNavigationProp<BottomTabParamList>>();
+    const isFocused = useIsFocused();
     const { addEvent } = useEvents();
 
     const [name, setName] = useState("");
@@ -69,14 +71,15 @@ export default function AddScreen() {
     const route = useRoute<any>();
 
     useEffect(() => {
-        if (route.params?.selectedLocation) {
+        if (isFocused && locationStore.selected) {
             setCoord({
-                lat: route.params.selectedLocation.latitude,
-                lng: route.params.selectedLocation.longitude
+                lat: locationStore.selected.latitude,
+                lng: locationStore.selected.longitude
             });
-            // Clear params to avoid loop if wanted, but fine since it doesn't run continuously
+            // Clear the store after consumption
+            locationStore.selected = null;
         }
-    }, [route.params?.selectedLocation]);
+    }, [isFocused]);
 
     const categories: Category[] = ["food", "sport", "nature", "culture", "other"];
 
