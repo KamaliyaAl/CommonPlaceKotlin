@@ -14,32 +14,37 @@ import { useNavigation } from "@react-navigation/native";
 import { useEvents } from "../context/EventsContext";
 import { Place } from "../types";
 
-type EventItem = {
-  id: string;
-  title: string;
-  desc: string;
-  rating: number;
-  reviews: number;
-  liked: boolean;
-  price?: string | null;
+import { api } from "../api";
+import { Category } from "../types";
+
+const CATEGORIES: { label: string; value: string }[] = [
+  { label: "All", value: "all" },
+  { label: "Food", value: "food" },
+  { label: "Sport", value: "sport" },
+  { label: "Nature", value: "nature" },
+  { label: "Culture", value: "culture" },
+  { label: "Other", value: "other" },
+];
+
+const getDaysArray = () => {
+    const days: { d: string; n: number; fullDate: string }[] = [];
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    for (let i = 0; i < 14; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        days.push({
+            d: dayNames[date.getDay()],
+            n: date.getDate(),
+            fullDate: `${yyyy}-${mm}-${dd}`
+        });
+    }
+    return days;
 };
-
-const MOCK: EventItem[] = [
-  { id: "1", title: "Beach Club ABOBA", desc: "Short description what is going on", rating: 4.8, reviews: 101, liked: false, price: "10€" },
-  { id: "2", title: "Sport ABOBA", desc: "Short description what is going on", rating: 2.1, reviews: 10, liked: false, price: "Free" },
-  { id: "3", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.9, reviews: 101, liked: true, price: null },
-  { id: "4", title: "Sport ABOBA", desc: "Short description what is going on", rating: 4.0, reviews: 1, liked: false, price: "5€" },
-];
-
-const DAYS = [
-  { d: "Mn", n: 21 },
-  { d: "Tue", n: 22 },
-  { d: "Wd", n: 23 },
-  { d: "Ths", n: 24 },
-  { d: "Fri", n: 25 },
-  { d: "Sut", n: 26 },
-  { d: "Sun", n: 27 },
-];
 
 function DayPill({ d, n, active }: { d: string; n: number; active?: boolean }) {
   return (
@@ -64,18 +69,48 @@ const formatTime = (isoString?: string | null) => {
 
 export default function FindScreen() {
   const navigation = useNavigation<any>();
-  const { events } = useEvents();
   const [query, setQuery] = useState("");
-  const [activeDay, setActiveDay] = useState(0);
+  const days = useMemo(() => getDaysArray(), []);
+  const [activeDate, setActiveDate] = useState<string | null>(null);
+  const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+  const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
 
-  const data = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return events;
-    return events.filter((x) => 
-        x.title.toLowerCase().includes(q) || 
-        x.description.toLowerCase().includes(q)
-    );
-  }, [query, events]);
+  const handleCategoryPress = (val: string) => {
+    if (val === "all") {
+      setActiveCategories(["all"]);
+      return;
+    }
+    
+    let newCats = activeCategories.includes("all") ? [] : [...activeCategories];
+    if (newCats.includes(val)) {
+      newCats = newCats.filter(c => c !== val);
+      if (newCats.length === 0) newCats = ["all"];
+    } else {
+      newCats.push(val);
+    }
+    setActiveCategories(newCats);
+  };
+
+  React.useEffect(() => {
+    const fetchFiltered = async () => {
+      try {
+        const res = await api.getEvents({
+          query,
+          categories: activeCategories,
+          date: activeDate || undefined
+        });
+        setFilteredEvents(res);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    // Fetch immediately, but in a real app you might want to debounce the query.
+    // For simplicity, we fetch every time the state changes.
+    const delayDebounceFn = setTimeout(() => {
+      fetchFiltered();
+    }, 300); // 300ms debounce
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, activeCategories, activeDate]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -98,9 +133,9 @@ export default function FindScreen() {
         </TouchableOpacity>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-          {DAYS.map((x, idx) => (
-            <TouchableOpacity key={x.d + x.n} onPress={() => setActiveDay(idx)}>
-              <DayPill d={x.d} n={x.n} active={idx === activeDay} />
+          {days.map((x) => (
+            <TouchableOpacity key={x.fullDate} onPress={() => setActiveDate(activeDate === x.fullDate ? null : x.fullDate)}>
+              <DayPill d={x.d} n={x.n} active={activeDate === x.fullDate} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -110,15 +145,26 @@ export default function FindScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Add Filters */}
-      <TouchableOpacity style={s.filtersBtn}>
-        <Text style={s.filtersText}>Add Filters</Text>
-        <MaterialCommunityIcons name="chevron-down" size={28} color="#fff" />
-      </TouchableOpacity>
+      {/* Categories */}
+      <View style={{ marginTop: 14 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}>
+          {CATEGORIES.map(c => (
+            <TouchableOpacity 
+              key={c.value} 
+              onPress={() => handleCategoryPress(c.value)}
+              style={[s.catPill, activeCategories.includes(c.value) && s.catPillActive]}
+            >
+              <Text style={[s.catText, activeCategories.includes(c.value) && s.catTextActive]}>
+                {c.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* список событий */}
       <FlatList
-        data={data}
+        data={filteredEvents}
         keyExtractor={(item) => item.id}
         contentContainerStyle={s.listContent}
         renderItem={({ item }) => (
@@ -211,18 +257,25 @@ const s = StyleSheet.create({
   dayText: { fontWeight: "800", color: "#111", fontSize: 13 },
   dayTextActive: { color: "#fff" },
 
-  filtersBtn: {
-    marginTop: 14,
-    marginHorizontal: 16,
-    backgroundColor: "#111",
-    borderRadius: 999,
-    height: 52,
-    paddingHorizontal: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  catPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#eee",
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
-  filtersText: { color: "#fff", fontWeight: "800", fontSize: 18 },
+  catPillActive: {
+    backgroundColor: "#111",
+    borderColor: "#111",
+  },
+  catText: {
+    fontWeight: "600",
+    color: "#555",
+  },
+  catTextActive: {
+    color: "#fff",
+  },
 
   listContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 90 },
 

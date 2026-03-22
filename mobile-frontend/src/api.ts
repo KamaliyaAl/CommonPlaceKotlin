@@ -1,8 +1,19 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
-  async getEvents() {
-    const response = await fetch(`${API_URL}/events`);
+  async getEvents(filters?: { query?: string; categories?: string[]; date?: string }) {
+    let url = `${API_URL}/events`;
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.query) params.append('query', filters.query);
+      if (filters.categories && filters.categories.length > 0 && !filters.categories.includes('all')) {
+        params.append('category', filters.categories.join(','));
+      }
+      if (filters.date) params.append('date', filters.date);
+      const queryString = params.toString();
+      if (queryString) url += `?${queryString}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch events');
     const events = await response.json();
     

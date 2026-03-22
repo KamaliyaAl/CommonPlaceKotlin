@@ -65,9 +65,39 @@ fun Route.eventRoutes() {
 
     route("/api/events") {
         get {
-            val events = withLogging("GET all events") {
-                val documents = FirebaseService.firestore.collection(collection).get().get()
-                documents.map { doc -> docToEvent(doc) }
+            val categoryParam = call.request.queryParameters["category"]
+            val categories = categoryParam?.split(",")?.map { it.trim().lowercase() }?.filter { it.isNotBlank() && it != "all" } ?: emptyList()
+            
+            val date = call.request.queryParameters["date"] // Expected format like YYYY-MM-DD
+            val queryParam = call.request.queryParameters["query"]?.lowercase()
+
+            val events = withLogging("GET filtered events") {
+                var firestoreQuery: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
+                
+                // Firestore IN query for multiple categories (supports up to 10 elements)
+                if (categories.isNotEmpty()) {
+                    firestoreQuery = firestoreQuery.whereIn("category", categories)
+                }
+
+                val documents = firestoreQuery.get().get()
+                var filtered = documents.map { docToEvent(it) }
+
+                // In-memory filter for date substring match (simplest approach for complex Timestamp mappings)
+                if (!date.isNullOrBlank()) {
+                    filtered = filtered.filter { 
+                        it.startTime?.contains(date) == true || it.time?.contains(date) == true
+                    }
+                }
+
+                // In-memory filter for text search (name or description, case-insensitive)
+                if (!queryParam.isNullOrBlank()) {
+                    filtered = filtered.filter { 
+                        it.name?.lowercase()?.contains(queryParam) == true || 
+                        it.description?.lowercase()?.contains(queryParam) == true 
+                    }
+                }
+                
+                filtered
             }
             call.respond(events)
         }
