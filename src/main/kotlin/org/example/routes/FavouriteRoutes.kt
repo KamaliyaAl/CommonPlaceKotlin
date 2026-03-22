@@ -102,7 +102,10 @@ fun Route.favouriteRoutes() {
                                 description = doc.getString("description"),
                                 geopositionId = doc.getString("geopositionId"),
                                 organizerId = doc.getString("organizerId"),
-                                time = doc.getString("time")
+                                startTime = doc.getString("startTime"),
+                                endTime = doc.getString("endTime"),
+                                price = doc.getString("price"),
+                                category = doc.getString("category")
                             )
                         } else null
                     }
