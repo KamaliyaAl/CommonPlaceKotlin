@@ -18,6 +18,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useEvents } from "../context/EventsContext";
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { Place } from "../types";
 
 import { api } from "../api";
@@ -79,12 +80,14 @@ export default function FindScreen() {
   const days = useMemo(() => getDaysArray(), []);
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+  const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
 
   // Internal states for the modal
   const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
+  const [pendingMinPrice, setPendingMinPrice] = useState("");
   const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
   const handleCategoryPress = (val: string) => {
@@ -105,15 +108,18 @@ export default function FindScreen() {
 
   const applyFilters = () => {
     setActiveCategories(pendingCategories);
+    setMinPrice(pendingMinPrice);
     setMaxPrice(pendingMaxPrice);
     setIsFilterVisible(false);
   };
 
   const resetFilters = () => {
     setPendingCategories(["all"]);
+    setPendingMinPrice("");
     setPendingMaxPrice("");
     // We can also immediately reset active filters or let the user click 'Apply'
     setActiveCategories(["all"]);
+    setMinPrice("");
     setMaxPrice("");
     setIsFilterVisible(false);
   };
@@ -121,6 +127,7 @@ export default function FindScreen() {
   // Sync pending state when modal opens
   const openModal = () => {
     setPendingCategories(activeCategories);
+    setPendingMinPrice(minPrice);
     setPendingMaxPrice(maxPrice);
     setIsFilterVisible(true);
   };
@@ -132,6 +139,7 @@ export default function FindScreen() {
           query,
           categories: activeCategories,
           date: activeDate || undefined,
+          minPrice: minPrice || undefined,
           maxPrice: maxPrice || undefined
         });
         setFilteredEvents(res);
@@ -143,7 +151,7 @@ export default function FindScreen() {
       fetchFiltered();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [query, activeCategories, activeDate, maxPrice]);
+  }, [query, activeCategories, activeDate, minPrice, maxPrice]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -287,16 +295,35 @@ export default function FindScreen() {
                 ))}
               </View>
 
-              <Text style={[s.filterLabel, { marginTop: 20 }]}>Max Price (€)</Text>
-              <View style={s.priceRow}>
-                <TextInput
-                  style={s.priceInput}
-                  placeholder="Max Budget"
-                  value={pendingMaxPrice}
-                  onChangeText={setPendingMaxPrice}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
+              <Text style={[s.filterLabel, { marginTop: 20 }]}>
+                Price Range: { (pendingMinPrice === "" && pendingMaxPrice === "") ? "Any" : 
+                  `${pendingMinPrice || "0"}€ - ${pendingMaxPrice || "50+"}€` }
+              </Text>
+              <View style={[s.priceRow, { justifyContent: 'center', paddingVertical: 10 }]}>
+                <MultiSlider
+                  values={[
+                    pendingMinPrice === "" ? 0 : parseFloat(pendingMinPrice),
+                    pendingMaxPrice === "" ? 50 : parseFloat(pendingMaxPrice)
+                  ]}
+                  sliderLength={280}
+                  onValuesChange={(vals) => {
+                    setPendingMinPrice(vals[0] === 0 && vals[1] === 50 ? "" : vals[0].toString());
+                    setPendingMaxPrice(vals[0] === 0 && vals[1] === 50 ? "" : vals[1].toString());
+                  }}
+                  min={0}
+                  max={50}
+                  step={2}
+                  allowOverlap={false}
+                  snapped
+                  selectedStyle={{ backgroundColor: '#111' }}
+                  unselectedStyle={{ backgroundColor: '#ccc' }}
+                  trackStyle={{ height: 4 }}
+                  markerStyle={{ 
+                    backgroundColor: '#111', 
+                    height: 20, 
+                    width: 20, 
+                    borderRadius: 10 
+                  }}
                 />
               </View>
 

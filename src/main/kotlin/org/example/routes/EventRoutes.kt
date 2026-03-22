@@ -71,6 +71,7 @@ fun Route.eventRoutes() {
             
             val date = call.request.queryParameters["date"] // Expected format like YYYY-MM-DD
             val queryParam = call.request.queryParameters["query"]?.lowercase()
+            val minPrice = call.request.queryParameters["minPrice"]?.toDoubleOrNull()
             val maxPrice = call.request.queryParameters["maxPrice"]?.toDoubleOrNull()
 
             val events = withLogging("GET filtered events") {
@@ -99,15 +100,17 @@ fun Route.eventRoutes() {
                     }
                 }
                 
-                // In-memory filter for price: always show if no price, otherwise check maxPrice
-                if (maxPrice != null) {
+                // In-memory filter for price: always show if no price, otherwise check range
+                if (minPrice != null || maxPrice != null) {
                     filtered = filtered.filter {
                         val priceStr = it.price
                         if (priceStr.isNullOrBlank()) {
                             true // No price = always show
                         } else {
                             val priceVal = Regex("[0-9.]+").find(priceStr)?.value?.toDoubleOrNull() ?: 0.0
-                            priceVal <= maxPrice
+                            val meetsMin = minPrice == null || priceVal >= minPrice
+                            val meetsMax = maxPrice == null || priceVal <= maxPrice
+                            meetsMin && meetsMax
                         }
                     }
                 }
