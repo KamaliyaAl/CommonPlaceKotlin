@@ -29,7 +29,8 @@ data class Event(
     val startTime: String? = null,
     val endTime: String? = null,
     val price: String? = null,
-    val category: String? = null
+    val category: String? = null,
+    val time: String? = null,
 )
 
 @Serializable

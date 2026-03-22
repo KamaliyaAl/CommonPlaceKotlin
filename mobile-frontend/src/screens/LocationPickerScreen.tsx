@@ -49,10 +49,11 @@ export default function LocationPickerScreen() {
     const longitude = parseFloat(lng);
     if (isNaN(latitude) || isNaN(longitude)) return;
 
-    if (route.params?.onSelect) {
-      route.params.onSelect({ latitude, longitude });
-    }
-    navigation.goBack();
+    navigation.navigate({
+      name: 'AddMain',
+      params: { selectedLocation: { latitude, longitude } },
+      merge: true,
+    });
   };
 
   // Sync marker when inputs change

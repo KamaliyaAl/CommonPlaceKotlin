@@ -14,7 +14,8 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useEffect } from "react";
 import { useEvents } from "../context/EventsContext";
 import { Category } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
@@ -38,12 +39,16 @@ const CATEGORY_LABEL: Record<Category, string> = {
 const getDaysArray = () => {
     const days: string[] = [];
     const today = new Date();
+    today.setHours(12, 0, 0, 0); // avoid DST shifts
     for (let i = 0; i < 14; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
-        days.push(date.toISOString().split("T")[0]);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        days.push(`${yyyy}-${mm}-${dd}`);
     }
-    return days;
+    return Array.from(new Set(days)); // ensure unique
 };
 
 export default function AddScreen() {
@@ -61,6 +66,17 @@ export default function AddScreen() {
     const [price, setPrice] = useState("");
     const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
     const [imageUri, setImageUri] = useState<string | null>(null);
+    const route = useRoute<any>();
+
+    useEffect(() => {
+        if (route.params?.selectedLocation) {
+            setCoord({
+                lat: route.params.selectedLocation.latitude,
+                lng: route.params.selectedLocation.longitude
+            });
+            // Clear params to avoid loop if wanted, but fine since it doesn't run continuously
+        }
+    }, [route.params?.selectedLocation]);
 
     const categories: Category[] = ["food", "sport", "nature", "culture", "other"];
 
@@ -269,10 +285,7 @@ export default function AddScreen() {
                                 // @ts-ignore
                                 navigation.navigate("LocationPicker", {
                                     initialLat: coord?.lat,
-                                    initialLng: coord?.lng,
-                                    onSelect: (res: { latitude: number; longitude: number }) => {
-                                        setCoord({ lat: res.latitude, lng: res.longitude });
-                                    }
+                                    initialLng: coord?.lng
                                 });
                             }}
                         >
