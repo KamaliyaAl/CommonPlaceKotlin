@@ -206,33 +206,6 @@ export const api = {
     return await response.json();
   },
 
-  // Favourite Locations (Places)
-  async getFavouriteLocations(userId: string) {
-    const response = await fetch(`${API_URL}/favourites/locations/${userId}`);
-    if (!response.ok) throw new Error('Failed to fetch favourite locations');
-    return await response.json();
-  },
-
-  async addFavouriteLocation(userId: string, locationId: string) {
-    const response = await fetch(`${API_URL}/favourites/locations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, locationId })
-    });
-    if (!response.ok) throw new Error('Failed to add favourite location');
-    return await response.json();
-  },
-
-  async removeFavouriteLocation(userId: string, locationId: string) {
-    const response = await fetch(`${API_URL}/favourites/locations`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, locationId })
-    });
-    if (!response.ok) throw new Error('Failed to remove favourite location');
-    return true;
-  },
-
   // Favourite Events
   async getFavouriteEvents(userId: string) {
     const response = await fetch(`${API_URL}/favourites/events/${userId}`);

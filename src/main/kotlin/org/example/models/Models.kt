@@ -77,14 +77,6 @@ data class FriendRequest(
 )
 
 @Serializable
-data class FavouriteLocation(
-    val id: String = "",
-    val userId: String = "",
-    val locationId: String = "",
-    val favourite: Boolean = false
-)
-
-@Serializable
 data class FavouriteEvent(
     val id: String = "",
     val userId: String = "",

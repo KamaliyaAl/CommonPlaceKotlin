@@ -7,13 +7,11 @@ import io.ktor.server.routing.*
 import org.example.firebase.FirebaseService
 import org.example.models.Location
 import org.example.models.Geoposition
-import org.example.models.FavouriteLocation
 import org.example.database.withLogging
 
 fun Route.locationRoutes() {
     val locationsCollection = "locations"
     val geopositionsCollection = "Geopositions"
-    val favouriteLocationsCollection = "favourite_locations"
 
     route("/api/locations") {
         get {
