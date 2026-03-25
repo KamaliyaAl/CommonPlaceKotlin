@@ -76,6 +76,7 @@ const formatTime = (isoString?: string | null) => {
 
 export default function FindScreen() {
   const navigation = useNavigation<any>();
+  const { toggleFavourite, isFavourite } = useEvents();
   const [query, setQuery] = useState("");
   const days = useMemo(() => getDaysArray(), []);
   const [activeDate, setActiveDate] = useState<string | null>(null);
@@ -204,11 +205,13 @@ export default function FindScreen() {
         renderItem={({ item }) => (
           <View style={s.card}>
             <View style={s.cardLeft}>
-              <TouchableOpacity style={s.heartBtn}>
+              <TouchableOpacity
+                style={s.heartBtn}
+                onPress={() => toggleFavourite(item)}>
                 <MaterialCommunityIcons
-                  name={item.liked ? "heart" : "heart-outline"}
+                  name={isFavourite(item.id) ? "heart" : "heart-outline"}
                   size={26}
-                  color="#111"
+                  color={isFavourite(item.id) ? "#C0392B" : "#111"}
                 />
               </TouchableOpacity>
             </View>
@@ -296,37 +299,59 @@ export default function FindScreen() {
               </View>
 
               <Text style={[s.filterLabel, { marginTop: 20 }]}>
-                Price Range: { (pendingMinPrice === "" && pendingMaxPrice === "") ? "Any" : 
-                  `${pendingMinPrice || "0"}€ - ${pendingMaxPrice || "50+"}€` }
+                Price Range: ${pendingMinPrice === "" ? 0 : pendingMinPrice} - $
+                {pendingMaxPrice === "" ? 100 : pendingMaxPrice}
               </Text>
-              <View style={[s.priceRow, { justifyContent: 'center', paddingVertical: 10 }]}>
+
+              <View style={s.sliderWrap}>
                 <MultiSlider
                   values={[
                     pendingMinPrice === "" ? 0 : parseFloat(pendingMinPrice),
-                    pendingMaxPrice === "" ? 50 : parseFloat(pendingMaxPrice)
+                    pendingMaxPrice === "" ? 100 : parseFloat(pendingMaxPrice),
                   ]}
-                  sliderLength={280}
-                  onValuesChange={(vals) => {
-                    setPendingMinPrice(vals[0] === 0 && vals[1] === 50 ? "" : vals[0].toString());
-                    setPendingMaxPrice(vals[0] === 0 && vals[1] === 50 ? "" : vals[1].toString());
-                  }}
                   min={0}
-                  max={50}
-                  step={2}
-                  allowOverlap={false}
+                  max={100}
+                  step={5}
+                  sliderLength={300}
+                  allowOverlap={true}
                   snapped
-                  selectedStyle={{ backgroundColor: '#111' }}
-                  unselectedStyle={{ backgroundColor: '#ccc' }}
-                  trackStyle={{ height: 4 }}
-                  markerStyle={{ 
-                    backgroundColor: '#111', 
-                    height: 20, 
-                    width: 20, 
-                    borderRadius: 10 
+                  enableLabel
+                  onValuesChange={(vals) => {
+                    const [min, max] = vals;
+                    setPendingMinPrice(String(min));
+                    setPendingMaxPrice(String(max));
+                  }}
+                  selectedStyle={s.sliderSelected}
+                  unselectedStyle={s.sliderUnselected}
+                  trackStyle={s.sliderTrack}
+                  containerStyle={s.sliderContainer}
+                  customMarker={() => <View style={s.sliderThumb} />}
+                  customLabel={(e) => {
+                    const sliderWidth = 300;
+
+                    const marker1 = e.oneMarkerLeftPosition ?? 0;
+                    const marker2 = e.twoMarkerLeftPosition ?? sliderWidth;
+
+                    return (
+                      <View style={s.labelsOverlay} pointerEvents="none">
+                        <View style={[s.priceBubbleWrap, { left: marker1 }]}>
+                          <View style={s.priceBubble}>
+                            <Text style={s.priceBubbleText}>${e.oneMarkerValue ?? 0}</Text>
+                          </View>
+                          <View style={s.priceBubbleArrow} />
+                        </View>
+
+                        <View style={[s.priceBubbleWrap, { left: marker2 }]}>
+                          <View style={s.priceBubble}>
+                            <Text style={s.priceBubbleText}>${e.twoMarkerValue ?? 100}</Text>
+                          </View>
+                          <View style={s.priceBubbleArrow} />
+                        </View>
+                      </View>
+                    );
                   }}
                 />
               </View>
-
               <TouchableOpacity 
                 style={s.applyBtn}
                 onPress={applyFilters}
@@ -457,25 +482,89 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  priceInput: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  priceDash: {
-    fontSize: 18,
-    color: '#888',
-  },
+sliderWrap: {
+  marginTop: 18,
+  paddingTop: 58,
+  width: 376, // 300 + 38 + 38
+  alignSelf: "center",
+  position: "relative",
+},
+
+sliderContainer: {
+  width: 300,
+  alignSelf: "center",
+},
+
+labelsOverlay: {
+  position: "absolute",
+  top: -58,
+  left: 38, // начало реального track
+  width: 300,
+  height: 52,
+  overflow: "visible",
+},
+
+priceBubbleWrap: {
+  position: "absolute",
+  width: 76,
+  marginLeft: -38, // центрируем bubble относительно координаты marker
+  alignItems: "center",
+},
+
+priceBubble: {
+  width: 76,
+  paddingVertical: 10,
+  borderRadius: 16,
+  backgroundColor: "#3A3A3A",
+  alignItems: "center",
+  justifyContent: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.12,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 4,
+},
+
+priceBubbleText: {
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: "800",
+},
+
+priceBubbleArrow: {
+  marginTop: -4,
+  width: 14,
+  height: 14,
+  backgroundColor: "#3A3A3A",
+  transform: [{ rotate: "45deg" }],
+},
+
+sliderTrack: {
+  height: 8,
+  borderRadius: 999,
+},
+
+sliderUnselected: {
+  backgroundColor: "#CFCFCF",
+},
+
+sliderSelected: {
+  backgroundColor: "#444",
+},
+
+sliderThumb: {
+  width: 30,
+  height: 30,
+  borderRadius: 15,
+  backgroundColor: "#2A2A2A",
+  borderWidth: 4,
+  borderColor: "#F3F3F3",
+  shadowColor: "#000",
+  shadowOpacity: 0.18,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 5,
+},
   applyBtn: {
     backgroundColor: '#111',
     height: 54,

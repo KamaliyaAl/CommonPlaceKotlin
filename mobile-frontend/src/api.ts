@@ -206,6 +206,7 @@ export const api = {
     return await response.json();
   },
 
+  // Favourite Locations (Places)
   async getFavouriteLocations(userId: string) {
     const response = await fetch(`${API_URL}/favourites/locations/${userId}`);
     if (!response.ok) throw new Error('Failed to fetch favourite locations');
@@ -229,6 +230,61 @@ export const api = {
       body: JSON.stringify({ userId, locationId })
     });
     if (!response.ok) throw new Error('Failed to remove favourite location');
+    return true;
+  },
+
+  // Favourite Events
+  async getFavouriteEvents(userId: string) {
+    const response = await fetch(`${API_URL}/favourites/events/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch favourite events');
+    const events = await response.json();
+
+    // Fetch geopositions to map lat/lng
+    const geoResponse = await fetch(`${API_URL}/geopositions`);
+    const geopositions = geoResponse.ok ? await geoResponse.json() : [];
+    const geoMap = new Map<string, any>(geopositions.map((g: any) => [g.id, g]));
+
+    return events.map((e: any) => {
+      const geo = geoMap.get(e.geopositionId);
+      const datePart = e.startTime && e.startTime.includes('T')
+        ? e.startTime.split('T')[0]
+        : (e.startTime || new Date().toISOString().split('T')[0]);
+
+      return {
+        id: e.id,
+        title: e.name || 'No title',
+        description: e.description || '',
+        lat: geo?.latitude || 0,
+        lng: geo?.longitude || 0,
+        category: e.category || 'other',
+        date: datePart,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        rating: 4.5,
+        reviewsCount: 0,
+        price: e.price,
+        imageUri: e.imageUri || null,
+      };
+    });
+  },
+
+  async addFavouriteEvent(userId: string, eventId: string) {
+    const response = await fetch(`${API_URL}/favourites/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, eventId })
+    });
+    if (!response.ok) throw new Error('Failed to add favourite event');
+    return await response.json();
+  },
+
+  async removeFavouriteEvent(userId: string, eventId: string) {
+    const response = await fetch(`${API_URL}/favourites/events`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, eventId })
+    });
+    if (!response.ok) throw new Error('Failed to remove favourite event');
     return true;
   }
 };

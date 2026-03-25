@@ -1,4 +1,11 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+} from "react";
 import { Place } from "../types";
 import { api } from "../api";
 
@@ -17,7 +24,11 @@ const days = getDaysArray();
 
 export type EventsContextType = {
   events: Place[];
+  favourites: Place[];
   addEvent: (e: Omit<Place, "id">) => Promise<Place>;
+  toggleFavourite: (event: Place) => void;
+  isFavourite: (id: string) => boolean;
+  refreshFavourites: () => Promise<void>;
 };
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined);
@@ -99,10 +110,26 @@ const initialEvents: Place[] = [
 
 export function EventsProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<Place[]>([]);
+  const [favourites, setFavourites] = useState<Place[]>([]);
+  // TODO: replace with real authenticated user id when auth is implemented
+  const userId = process.env.EXPO_PUBLIC_USER_ID || "user1";
 
   useEffect(() => {
     api.getEvents().then(setEvents).catch(console.error);
   }, []);
+
+  const refreshFavourites = useCallback(async () => {
+    try {
+      const favs = await api.getFavouriteEvents(userId);
+      setFavourites(favs);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    refreshFavourites();
+  }, [refreshFavourites]);
 
   const addEvent = useCallback(async (e: Omit<Place, "id">): Promise<Place> => {
     const created = await api.addEvent(e);
@@ -110,7 +137,58 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
     return created;
   }, []);
 
-  const value = useMemo(() => ({ events, addEvent }), [events, addEvent]);
+  const toggleFavourite = useCallback((event: Place) => {
+    setFavourites((prev) => {
+      const exists = prev.some((item) => item.id === event.id);
+
+      // Optimistic update
+      if (exists) {
+        // Remove locally then call backend
+        (async () => {
+          try {
+            await api.removeFavouriteEvent(userId, event.id);
+          } catch (e) {
+            console.error(e);
+            // Revert on failure
+            setFavourites((cur) => {
+              if (cur.some((i) => i.id === event.id)) return cur; // already reverted by another action
+              return [...cur, event];
+            });
+          }
+        })();
+        return prev.filter((item) => item.id !== event.id);
+      } else {
+        // Add locally then call backend
+        (async () => {
+          try {
+            await api.addFavouriteEvent(userId, event.id);
+          } catch (e) {
+            console.error(e);
+            // Revert on failure
+            setFavourites((cur) => cur.filter((i) => i.id !== event.id));
+          }
+        })();
+        return [...prev, event];
+      }
+    });
+  }, [userId]);
+
+  const isFavourite = useCallback(
+    (id: string) => favourites.some((item) => item.id === id),
+    [favourites]
+  );
+
+  const value = useMemo(
+    () => ({
+      events,
+      favourites,
+      addEvent,
+      toggleFavourite,
+      isFavourite,
+      refreshFavourites,
+    }),
+    [events, favourites, addEvent, toggleFavourite, isFavourite, refreshFavourites]
+  );
 
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;
 }

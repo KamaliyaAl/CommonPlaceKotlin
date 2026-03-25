@@ -9,9 +9,15 @@ import {
   ImageBackground,
 } from "react-native";
 
-function ActionButton({ title }: { title: string }) {
+function ActionButton({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress?: () => void;
+}) {
   return (
-    <TouchableOpacity style={s.button}>
+    <TouchableOpacity style={s.button} onPress={onPress}>
       <Text style={s.buttonText}>{title}</Text>
     </TouchableOpacity>
   );
@@ -38,7 +44,9 @@ export default function ListScreen() {
           <View style={s.rowMarginTop} />
 
           <View style={s.row}>
-            <ActionButton title="Favourites" />
+           <TouchableOpacity style={s.button} onPress={() => navigation.navigate("Favourites")}>
+                              <Text style={s.buttonText}>Favourites</Text>
+           </TouchableOpacity>
             <View style={s.spacer} />
             <ActionButton title="History" />
           </View>
