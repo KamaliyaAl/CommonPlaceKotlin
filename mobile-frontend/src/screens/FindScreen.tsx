@@ -204,48 +204,63 @@ export default function FindScreen() {
         contentContainerStyle={s.listContent}
         renderItem={({ item }) => (
           <View style={s.card}>
-            <View style={s.cardLeft}>
-              <TouchableOpacity
-                style={s.heartBtn}
-                onPress={() => toggleFavourite(item)}>
-                <MaterialCommunityIcons
-                  name={isFavourite(item.id) ? "heart" : "heart-outline"}
-                  size={26}
-                  color={isFavourite(item.id) ? "#C0392B" : "#111"}
-                />
-              </TouchableOpacity>
-            </View>
+            {/* Main tappable area (everything except top heart and bottom row) */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Open details for ${item.title}`}
+              style={{ width: '100%' }}
+            >
+              {/* Title above the photo, aligned left */}
+              <Text style={s.cardTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
 
-            {item.imageUri ? (
-              <Image source={{ uri: item.imageUri }} style={s.thumb} />
-            ) : (
-              <View style={s.thumb} />
-            )}
-
-            <View style={s.cardBody}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Text style={s.cardTitle}>{item.title}</Text>
-                {item.price && (
-                  <Text style={{ fontWeight: '800', color: '#3B7D7A', fontSize: 14 }}>{item.price}€</Text>
+              {/* Content row: photo left, info right */}
+              <View style={s.cardContentRow}>
+                {item.imageUri ? (
+                  <Image source={{ uri: item.imageUri }} style={s.thumb} />
+                ) : (
+                  <View style={s.thumb} />
                 )}
-              </View>
-              {(item.startTime || item.endTime) && (
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-                  {formatTime(item.startTime)} - {formatTime(item.endTime)}
-                </Text>
-              )}
-              <Text style={s.cardDesc}>{item.description}</Text>
 
-              <View style={s.cardBottomRow}>
-                <Text style={s.mapText}>Show on the map</Text>
+                <View style={s.cardBody}>
+                  {item.price && (
+                    <Text style={{ fontWeight: '800', color: '#3B7D7A', fontSize: 14 }}>€{item.price}</Text>
+                  )}
 
-                <View style={s.ratingWrap}>
-                  <Text style={s.ratingText}>
-                    {(item.rating || 0).toFixed(1)} ({(item.reviewsCount || 0)} review{(item.reviewsCount || 0) === 1 ? "" : "s"})
-                  </Text>
-                  <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
+                  {(item.startTime || item.endTime) && (
+                    <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                      {formatTime(item.startTime)} - {formatTime(item.endTime)}
+                    </Text>
+                  )}
+
+                  <Text style={s.cardDesc} numberOfLines={5} ellipsizeMode="tail">{item.description}</Text>
                 </View>
               </View>
+            </TouchableOpacity>
+
+            {/* Heart in the top-right corner (must be after main touchable to be on top) */}
+            <TouchableOpacity
+              style={s.heartAbsolute}
+              onPress={() => toggleFavourite(item)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons
+                name={isFavourite(item.id) ? "heart" : "heart-outline"}
+                size={26}
+                color={isFavourite(item.id) ? "#C0392B" : "#111"}
+              />
+            </TouchableOpacity>
+
+            {/* Bottom row (non-tappable for details) */}
+            <View style={s.cardBottomRow}>
+              <View style={s.ratingWrap}>
+                <Text style={s.ratingText}>
+                  {(item.rating || 0).toFixed(1)} ({(item.reviewsCount || 0)} review{(item.reviewsCount || 0) === 1 ? "" : "s"})
+                </Text>
+                <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
+              </View>
+              <Text style={s.mapText}>Show on the map</Text>
             </View>
           </View>
         )}
@@ -299,7 +314,7 @@ export default function FindScreen() {
               </View>
 
               <Text style={[s.filterLabel, { marginTop: 20 }]}>
-                Price Range: ${pendingMinPrice === "" ? 0 : pendingMinPrice} - $
+                Price Range: €{pendingMinPrice === "" ? 0 : pendingMinPrice} - €
                 {pendingMaxPrice === "" ? 100 : pendingMaxPrice}
               </Text>
 
@@ -336,14 +351,14 @@ export default function FindScreen() {
                       <View style={s.labelsOverlay} pointerEvents="none">
                         <View style={[s.priceBubbleWrap, { left: marker1 }]}>
                           <View style={s.priceBubble}>
-                            <Text style={s.priceBubbleText}>${e.oneMarkerValue ?? 0}</Text>
+                            <Text style={s.priceBubbleText}>€{e.oneMarkerValue ?? 0}</Text>
                           </View>
                           <View style={s.priceBubbleArrow} />
                         </View>
 
                         <View style={[s.priceBubbleWrap, { left: marker2 }]}>
                           <View style={s.priceBubble}>
-                            <Text style={s.priceBubbleText}>${e.twoMarkerValue ?? 100}</Text>
+                            <Text style={s.priceBubbleText}>€{e.twoMarkerValue ?? 100}</Text>
                           </View>
                           <View style={s.priceBubbleArrow} />
                         </View>
@@ -593,20 +608,22 @@ sliderThumb: {
 
   card: {
     backgroundColor: "#D9D9D9",
-    borderRadius: 0,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 10,
   },
   cardLeft: { width: 28, alignItems: "center" },
   heartBtn: { padding: 2 },
+  heartAbsolute: { position: 'absolute', top: 10, right: 10, padding: 2, zIndex: 10, elevation: 10 },
 
-  thumb: { width: 64, height: 64, backgroundColor: "#777" },
+  thumb: { width: 64, height: 64, backgroundColor: "#777", borderRadius: 12 },
 
+  cardContentRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardBody: { flex: 1 },
-  cardTitle: { fontWeight: "900", fontSize: 16, color: "#111" },
+  cardTitle: { fontWeight: "900", fontSize: 16, color: "#111", marginBottom: 6 },
   cardDesc: { marginTop: 4, color: "#222" },
 
   cardBottomRow: {
@@ -614,8 +631,9 @@ sliderThumb: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: '100%',
   },
-  mapText: { color: "#222", fontWeight: "700" },
+  mapText: { color: "#222", fontWeight: "700", marginLeft: 'auto', textAlign: 'right' },
 
   ratingWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
   ratingText: { color: "#111", fontWeight: "700" },
