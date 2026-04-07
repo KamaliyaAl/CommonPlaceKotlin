@@ -93,14 +93,34 @@ export default function AddScreen() {
             const res = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
+                aspect: [16, 9],
                 quality: 0.8,
             });
             if (!res.canceled && res.assets && res.assets.length > 0) {
-                setImageUri(res.assets[0].uri);
+                const localUri = res.assets[0].uri;
+
+                const formData = new FormData();
+                formData.append('file', {
+                    uri: localUri,
+                    name: 'event.jpg',
+                    type: 'image/jpeg',
+                } as any);
+                formData.append('upload_preset', 'commonplace');
+
+                const uploadRes = await fetch(
+                    'https://api.cloudinary.com/v1_1/doxux3r14/image/upload',
+                    { method: 'POST', body: formData }
+                );
+                const uploadData = await uploadRes.json();
+                if (uploadData.secure_url) {
+                    setImageUri(uploadData.secure_url);
+                } else {
+                    Alert.alert("Upload failed", "Could not upload image, try again.");
+                }
             }
         } catch (e) {
             console.warn(e);
-            Alert.alert("Error", "Could not open the image gallery");
+            Alert.alert("Error", "Could not upload the image");
         }
     };
 
@@ -123,12 +143,12 @@ export default function AddScreen() {
             return Alert.alert("Validation", "End time should be in HH:mm format (e.g. 21:00)");
         }
 
-        const startTimestamp = startTime.trim() 
-            ? `${startDate}T${startTime.trim()}:00Z` 
-            : `${startDate}T00:00:00Z`;
-        const endTimestamp = endTime.trim() 
-            ? `${endDate}T${endTime.trim()}:00Z` 
-            : `${endDate}T23:59:59Z`;
+        const startTimestamp = startTime.trim()
+            ? `${startDate}T${startTime.trim()}:00`
+            : `${startDate}T00:00:00`;
+        const endTimestamp = endTime.trim()
+            ? `${endDate}T${endTime.trim()}:00`
+            : `${endDate}T23:59:59`;
 
         try {
             const created = await addEvent({
@@ -254,7 +274,7 @@ export default function AddScreen() {
                                 style={styles.input}
                                 value={startTime}
                                 onChangeText={setStartTime}
-                                placeholder="Start Time (e.g. 18:00)"
+                                placeholder="Start Time (e.g. 00:00)"
                             />
                         </View>
                     </View>
@@ -274,7 +294,7 @@ export default function AddScreen() {
                                 style={styles.input}
                                 value={endTime}
                                 onChangeText={setEndTime}
-                                placeholder="End Time (e.g. 21:00)"
+                                placeholder="End Time (e.g. 23:59)"
                             />
                         </View>
                     </View>
@@ -330,7 +350,7 @@ const styles = StyleSheet.create({
     },
     photoUploadArea: {
         width: "100%",
-        aspectRatio: 1,
+        aspectRatio: 16 / 9,
         marginBottom: 30,
     },
     photoUploadDashed: {

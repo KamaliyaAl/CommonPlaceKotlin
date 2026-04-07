@@ -28,13 +28,9 @@ const CATEGORY_LABEL: Record<Category, string> = {
 const formatTime = (isoString?: string | null) => {
   if (!isoString) return "?";
   if (!isoString.includes("T")) return isoString;
-  try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return isoString;
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  } catch (e) {
-    return isoString;
-  }
+  const timePart = isoString.split("T")[1];
+  if (!timePart) return "?";
+  return timePart.slice(0, 5); // HH:mm
 };
 
 export default function EventDetailsScreen() {
@@ -116,7 +112,7 @@ export default function EventDetailsScreen() {
       <ScrollView contentContainerStyle={s.container}>
 
         {event.imageUri ? (
-          <Image source={{ uri: event.imageUri }} style={s.cover} />
+          <Image source={{ uri: event.imageUri }} style={s.cover} resizeMode="cover" />
         ) : (
           <View style={[s.cover, { backgroundColor: "#E6E6E6" }]} />
         )}

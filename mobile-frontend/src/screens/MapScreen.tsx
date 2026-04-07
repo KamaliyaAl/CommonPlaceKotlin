@@ -9,9 +9,11 @@ import {
     Platform,
     FlatList,
 } from "react-native";
-import MapView, { Marker, Callout, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { MapStackParamList } from "./MapStack";
 import { useEvents } from "../context/EventsContext";
 import { Place, Category } from "../types";
 
@@ -45,19 +47,16 @@ const getDaysArray = () => {
 
 const formatTime = (isoString?: string | null) => {
     if (!isoString) return "?";
-    if (!isoString.includes("T")) return isoString; // Old format
-    try {
-        const d = new Date(isoString);
-        if (isNaN(d.getTime())) return isoString;
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    } catch (e) {
-        return isoString;
-    }
+    if (!isoString.includes("T")) return isoString;
+    const timePart = isoString.split("T")[1];
+    if (!timePart) return "?";
+    return timePart.slice(0, 5); // HH:mm
 };
 
 export default function MapScreen() {
     const days = useMemo(() => getDaysArray(), []);
     const [selectedDate, setSelectedDate] = useState(days[0]);
+    const navigation = useNavigation<NativeStackNavigationProp<MapStackParamList>>();
 
     const { events } = useEvents();
 
@@ -140,7 +139,6 @@ export default function MapScreen() {
                     provider={PROVIDER_DEFAULT}
                     style={StyleSheet.absoluteFill}
                     initialRegion={LIMASSOL}
-                    onPress={() => setSelectedId(null)}
                     showsUserLocation
                     showsMyLocationButton
                 >
@@ -157,15 +155,6 @@ export default function MapScreen() {
                                     color={selectedId === p.id ? "#FFFFFF" : "#111111"}
                                 />
                             </View>
-                            <Callout onPress={() => setSelectedId(p.id)}>
-                                <View style={{ maxWidth: 220 }}>
-                                    <Text style={{ fontWeight: "700", fontSize: 14 }}>{p.title}</Text>
-                                    <Text style={{ color: "#555", marginTop: 2 }}>{CATEGORY_LABEL[p.category]}</Text>
-                                    <Text style={{ color: "#777", marginTop: 4 }} numberOfLines={2}>
-                                        {p.description}
-                                    </Text>
-                                </View>
-                            </Callout>
                         </Marker>
                     ))}
                 </MapView>
@@ -231,8 +220,13 @@ export default function MapScreen() {
                 {/* Bottom card */}
                 {selected && (
                     <View style={styles.bottomCard}>
+                        <Pressable onPress={() => setSelectedId(null)} style={{ position: "absolute", top: 10, right: 10, zIndex: 1, padding: 4 }}>
+                            <MaterialCommunityIcons name="close" size={20} color="#111" />
+                        </Pressable>
                         <View style={styles.cardHeader}>
                             <Text style={styles.cardTitle}>{selected.title}</Text>
+                        </View>
+                        <View style={{ alignSelf: "flex-end" }}>
                             <View style={styles.ratingBox}>
                                 <MaterialCommunityIcons name="star" size={14} color="#FFB800" />
                                 <Text style={styles.ratingText}>{selected.rating}</Text>
@@ -246,8 +240,8 @@ export default function MapScreen() {
                                 </Text>
                             </View>
                             {selected.price && (
-                                <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: "#E6F4F1" }]}> 
-                                    <Text style={[styles.categoryBadgeText, { color: "#3B7D7A" }]}> 
+                                <View style={[styles.categoryBadge, { marginLeft: 8, backgroundColor: "#E6F4F1" }]}>
+                                    <Text style={[styles.categoryBadgeText, { color: "#3B7D7A" }]}>
                                         €{selected.price}
                                     </Text>
                                 </View>
@@ -259,6 +253,12 @@ export default function MapScreen() {
                                     </Text>
                                 </View>
                             )}
+                            <Pressable
+                                onPress={() => navigation.navigate("EventDetails", { eventId: selected.id })}
+                                style={[styles.categoryBadge, { marginLeft: "auto", backgroundColor: "#111" }]}
+                            >
+                                <Text style={[styles.categoryBadgeText, { color: "#fff" }]}>Expand</Text>
+                            </Pressable>
                         </View>
                     </View>
                 )}

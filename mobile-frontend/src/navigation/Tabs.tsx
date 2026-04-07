@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import AddScreen from "../screens/AddScreen";
 import ListStack from "../screens/ListStack";
-import MapScreen from "../screens/MapScreen";
+import MapStack from "../screens/MapStack";
 import ProfileScreen from "../screens/ProfileScreen";
 import UsersListScreen from "../screens/UsersListScreen";
 
@@ -113,7 +113,7 @@ export default function Tabs() {
         >
             <Tab.Screen name="AddTab" component={AddNavigator} />
             <Tab.Screen name="List" component={ListStack} />
-            <Tab.Screen name="Map" component={MapScreen} />
+            <Tab.Screen name="Map" component={MapStack} />
             <Tab.Screen name="UsersTab" component={UsersNavigator} />
             <Tab.Screen name="ProfileTab" component={ProfileNavigator} />
         </Tab.Navigator>
