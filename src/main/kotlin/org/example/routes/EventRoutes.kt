@@ -43,7 +43,8 @@ fun Route.eventRoutes() {
             endTime = getStringOrTimestamp("endTime"),
             price = doc.getString("price"),
             category = doc.getString("category"),
-            imageUri = doc.getString("imageUri")
+            imageUri = doc.getString("imageUri"),
+            isFromApi = doc.getBoolean("isFromApi")
         )
     }
 
@@ -152,12 +153,13 @@ fun Route.eventRoutes() {
                 "endTime" to event.endTime?.toTimestamp(),
                 "price" to event.price,
                 "category" to event.category,
-                "imageUri" to event.imageUri
+                "imageUri" to event.imageUri,
+                "isFromApi" to false
             )
             withLogging("POST event") {
                 docRef.set(data).get()
             }
-            call.respond(HttpStatusCode.Created, event.copy(id = docRef.id))
+            call.respond(HttpStatusCode.Created, event.copy(id = docRef.id, isFromApi = false))
         }
 
         put("/{id}") {
@@ -175,12 +177,13 @@ fun Route.eventRoutes() {
                 "endTime" to event.endTime?.toTimestamp(),
                 "price" to event.price,
                 "category" to event.category,
-                "imageUri" to event.imageUri
+                "imageUri" to event.imageUri,
+                "isFromApi" to false
             )
             withLogging("PUT event $id") {
                 FirebaseService.firestore.collection(collection).document(id).set(data).get()
             }
-            call.respond(HttpStatusCode.OK, event.copy(id = id))
+            call.respond(HttpStatusCode.OK, event.copy(id = id, isFromApi = false))
         }
 
         delete("/{id}") {

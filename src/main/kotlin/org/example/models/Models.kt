@@ -32,6 +32,7 @@ data class Event(
     val category: String? = null,
     val time: String? = null,
     val imageUri: String? = null,
+    val isFromApi: Boolean? = null,  // true = fetched via Places API, false = added manually, null = legacy
 )
 
 @Serializable
