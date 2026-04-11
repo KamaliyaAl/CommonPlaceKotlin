@@ -1,5 +1,22 @@
 export type Category = "food" | "sport" | "nature" | "culture" | "other";
 
+export type PlaceCategory = "restaurant" | "cafe" | "bar" | "gym" | "park" | "museum" | "gallery" | "hotel" | "shop" | "other";
+
+export type PlaceEntry = {
+  id: string;
+  name: string;
+  description?: string;
+  category?: PlaceCategory;
+  address?: string;
+  phone?: string;
+  website?: string;
+  openingHours?: string;
+  latitude?: number;
+  longitude?: number;
+  imageUri?: string | null;
+  organizerId?: string;
+};
+
 export type Place = {
   id: string;
   title: string;

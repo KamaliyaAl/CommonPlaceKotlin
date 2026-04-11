@@ -202,6 +202,20 @@ export default function AddScreen() {
 
     return (
         <SafeAreaView style={styles.safe}>
+            {/* Toggle Event / Place */}
+            <View style={styles.toggleRow}>
+                <View style={[styles.toggleBtn, styles.toggleBtnActive]}>
+                    <Text style={[styles.toggleBtnText, styles.toggleBtnTextActive]}>Event</Text>
+                </View>
+                <Pressable
+                    style={styles.toggleBtn}
+                    // @ts-ignore
+                    onPress={() => navigation.navigate("CreatePlace")}
+                >
+                    <Text style={styles.toggleBtnText}>Place</Text>
+                </Pressable>
+            </View>
+
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.header}>Create new event</Text>
 
@@ -335,6 +349,32 @@ const styles = StyleSheet.create({
     safe: {
         flex: 1,
         backgroundColor: "#EBEBEB",
+    },
+    toggleRow: {
+        flexDirection: "row",
+        marginHorizontal: 20,
+        marginTop: 12,
+        borderRadius: 20,
+        overflow: "hidden",
+        borderWidth: 2,
+        borderColor: "#8AAFB1",
+    },
+    toggleBtn: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: "center",
+        backgroundColor: "#fff",
+    },
+    toggleBtnActive: {
+        backgroundColor: "#8AAFB1",
+    },
+    toggleBtnText: {
+        fontWeight: "600",
+        color: "#8AAFB1",
+        fontSize: 15,
+    },
+    toggleBtnTextActive: {
+        color: "#fff",
     },
     scrollContent: {
         paddingHorizontal: 20,

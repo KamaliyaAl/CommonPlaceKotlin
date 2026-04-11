@@ -25,13 +25,15 @@ const ProfileStack = createNativeStackNavigator();
 const AddStack = createNativeStackNavigator();
 
 import LocationPickerScreen from "../screens/LocationPickerScreen";
+import CreatePlaceScreen from "../screens/CreatePlaceScreen";
 
 function AddNavigator() {
     return (
         <AddStack.Navigator screenOptions={{ headerShown: false }}>
             <AddStack.Screen name="AddMain" component={AddScreen} />
-            <AddStack.Screen 
-                name="LocationPicker" 
+            <AddStack.Screen name="CreatePlace" component={CreatePlaceScreen} />
+            <AddStack.Screen
+                name="LocationPicker"
                 component={LocationPickerScreen}
                 options={{ presentation: 'modal' }}
             />

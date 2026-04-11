@@ -259,5 +259,22 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to remove favourite event');
     return true;
+  },
+
+  // Place Entries
+  async getPlaceEntries() {
+    const response = await fetch(`${API_URL}/place-entries`);
+    if (!response.ok) throw new Error('Failed to fetch place entries');
+    return await response.json();
+  },
+
+  async addPlaceEntry(place: Omit<import('./types').PlaceEntry, 'id'>) {
+    const response = await fetch(`${API_URL}/place-entries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(place)
+    });
+    if (!response.ok) throw new Error('Failed to create place entry');
+    return await response.json();
   }
 };

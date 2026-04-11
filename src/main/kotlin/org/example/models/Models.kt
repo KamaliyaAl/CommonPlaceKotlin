@@ -84,3 +84,19 @@ data class FavouriteEvent(
     val eventId: String = "",
     val favourite: Boolean = false
 )
+
+@Serializable
+data class PlaceEntry(
+    val id: String = "",
+    val name: String? = null,
+    val description: String? = null,
+    val category: String? = null,
+    val address: String? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val openingHours: String? = null,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val imageUri: String? = null,
+    val organizerId: String? = null
+)
