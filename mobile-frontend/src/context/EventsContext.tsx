@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { Place } from "../types";
 import { api } from "../api";
+import { useAuth } from "../auth/AuthContext";
 
 const getDaysArray = () => {
   const days: string[] = [];
@@ -109,10 +110,10 @@ const initialEvents: Place[] = [
 ];
 
 export function EventsProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Place[]>([]);
   const [favourites, setFavourites] = useState<Place[]>([]);
-  // TODO: replace with real authenticated user id when auth is implemented
-  const userId = process.env.EXPO_PUBLIC_USER_ID || "user1";
+  const userId = user?.uid || process.env.EXPO_PUBLIC_USER_ID || "user1";
 
   useEffect(() => {
     api.getEvents().then(setEvents).catch(console.error);
@@ -132,10 +133,10 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
   }, [refreshFavourites]);
 
   const addEvent = useCallback(async (e: Omit<Place, "id">): Promise<Place> => {
-    const created = await api.addEvent(e);
+    const created = await api.addEvent({ ...e, organizerId: user?.uid ?? null });
     setEvents((prev) => [created, ...prev]);
     return created;
-  }, []);
+  }, [user?.uid]);
 
   const toggleFavourite = useCallback((event: Place) => {
     setFavourites((prev) => {

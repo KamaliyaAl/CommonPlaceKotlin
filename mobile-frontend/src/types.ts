@@ -32,4 +32,5 @@ export type Place = {
   imageUri?: string | null;
   price?: string | null;
   liked?: boolean;
+  organizerId?: string | null;
 };

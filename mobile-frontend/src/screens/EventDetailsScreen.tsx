@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,6 +9,7 @@ import {
   Alert,
   Share,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +17,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEvents } from "../context/EventsContext";
 import { Category } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
+import { api } from "../api";
 
 const CATEGORY_LABEL: Record<Category, string> = {
   food: "Food",
@@ -41,6 +43,21 @@ export default function EventDetailsScreen() {
   const eventId: string | undefined = route?.params?.eventId;
   const event = useMemo(() => events.find(e => e.id === eventId), [events, eventId]);
   const [joined, setJoined] = useState(false);
+  const [organizer, setOrganizer] = useState<any>(null);
+  const [loadingOrganizer, setLoadingOrganizer] = useState(false);
+
+  useEffect(() => {
+    const organizerId = event?.organizerId;
+    if (!organizerId) {
+      setOrganizer(null);
+      return;
+    }
+    setLoadingOrganizer(true);
+    api.getProfile(organizerId)
+      .then(setOrganizer)
+      .catch(() => setOrganizer(null))
+      .finally(() => setLoadingOrganizer(false));
+  }, [event?.organizerId]);
 
   if (!event) {
     return (
@@ -183,21 +200,35 @@ export default function EventDetailsScreen() {
           {/* Organizer block under the Join/Map buttons */}
           <View style={s.organizerWrap}>
             <Text style={s.sectionTitle}>Organizer</Text>
-            <View style={s.organizerRow}>
-              {((event as any)?.organizerPhotoUri) ? (
-                <Image source={{ uri: (event as any).organizerPhotoUri }} style={s.organizerAvatar} />
+            <TouchableOpacity
+              style={s.organizerRow}
+              onPress={() => organizer && navigation.navigate("UserProfile" as any, { userId: organizer.id })}
+              disabled={!organizer}
+              activeOpacity={organizer ? 0.7 : 1}
+            >
+              {organizer?.photoURL ? (
+                <Image source={{ uri: organizer.photoURL }} style={s.organizerAvatar} />
               ) : (
                 <View style={[s.organizerAvatar, { backgroundColor: '#E6E6E6', alignItems: 'center', justifyContent: 'center' }]}>
                   <MaterialCommunityIcons name="account-circle" size={36} color="#9A9A9A" />
                 </View>
               )}
-              <View style={{ marginLeft: 12 }}>
-                <Text style={s.organizerName}>{(event as any)?.organizerName ?? 'Unknown organizer'}</Text>
-                {!!(event as any)?.organizerTag && (
-                  <Text style={s.organizerTag}>{(event as any).organizerTag}</Text>
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                {loadingOrganizer ? (
+                  <ActivityIndicator size="small" color="#9A9A9A" />
+                ) : (
+                  <>
+                    <Text style={s.organizerName}>{organizer?.name ?? 'Unknown organizer'}</Text>
+                    {!!organizer?.email && (
+                      <Text style={s.organizerTag}>{organizer.email}</Text>
+                    )}
+                  </>
                 )}
               </View>
-            </View>
+              {organizer && (
+                <MaterialCommunityIcons name="chevron-right" size={22} color="#9A9A9A" />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

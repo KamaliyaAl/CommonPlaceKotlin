@@ -45,6 +45,7 @@ export const api = {
         reviewsCount: 0,
         price: e.price,
         imageUri: e.imageUri || null,
+        organizerId: e.organizerId || null,
       };
     });
   },
@@ -72,7 +73,7 @@ export const api = {
         startTime: event.startTime,
         endTime: event.endTime,
         category: event.category,
-        organizerId: 'user1', // Dummy for now
+        organizerId: event.organizerId || null,
         price: event.price,
         imageUri: event.imageUri
       })
@@ -237,6 +238,7 @@ export const api = {
         reviewsCount: 0,
         price: e.price,
         imageUri: e.imageUri || null,
+        organizerId: e.organizerId || null,
       };
     });
   },
