@@ -128,22 +128,45 @@ export default function EventDetailsScreen() {
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.container}>
 
-        {event.imageUri ? (
-          <Image source={{ uri: event.imageUri }} style={s.cover} resizeMode="cover" />
-        ) : (
-          <View style={[s.cover, { backgroundColor: "#E6E6E6" }]} />
-        )}
+        {/* Cover with overlay */}
+        <View style={s.coverWrap}>
+          {event.imageUri ? (
+            <Image source={{ uri: event.imageUri }} style={s.cover} resizeMode="cover" />
+          ) : (
+            <View style={[s.cover, { backgroundColor: "#B0B0B0" }]} />
+          )}
+          <View style={s.coverDim} />
+
+          <TouchableOpacity style={s.heartOverlay} onPress={() => toggleFavourite(event)}>
+            <MaterialCommunityIcons
+              name={isFavourite(event.id) ? "heart" : "heart-outline"}
+              size={26}
+              color="#fff"
+            />
+          </TouchableOpacity>
+
+          <View style={s.coverBottom}>
+            <TouchableOpacity style={s.coverPill}>
+              <Text style={s.coverPillText}>View other photos</Text>
+            </TouchableOpacity>
+            <View style={s.ratingPill}>
+              <Text style={s.ratingPillText}>
+                {(event.rating ?? 0).toFixed(1)}  ({event.reviewsCount ?? 0} reviews)
+              </Text>
+              <Text style={{ fontSize: 15, marginLeft: 3 }}>😊</Text>
+            </View>
+            <TouchableOpacity
+              style={s.coverPill}
+              onPress={() => navigation.navigate("Reviews" as any, { eventId: event.id })}
+            >
+              <Text style={s.coverPillText}>Go to reviews</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={s.body}>
           <View style={s.titleRow}>
             <Text style={s.title}>{event.title}</Text>
-            <TouchableOpacity style={s.heartBtn} onPress={() => toggleFavourite(event)}>
-              <MaterialCommunityIcons
-                name={isFavourite(event.id) ? "heart" : "heart-outline"}
-                size={26}
-                color={isFavourite(event.id) ? "#C0392B" : "#111"}
-              />
-            </TouchableOpacity>
           </View>
 
           <View style={s.metaRow}>
@@ -244,7 +267,15 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
   container: { paddingBottom: 90 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  cover: { width: "100%", height: 220 },
+  coverWrap: { height: 230, position: "relative" },
+  cover: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  coverDim: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.38)" },
+  heartOverlay: { position: "absolute", top: 14, left: 14, padding: 4 },
+  coverBottom: { position: "absolute", bottom: 12, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  coverPill: { backgroundColor: "rgba(0,0,0,0.52)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  coverPillText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  ratingPill: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.52)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  ratingPillText: { color: "#fff", fontSize: 11, fontWeight: "600" },
   body: { paddingHorizontal: 16, paddingTop: 16 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 22, fontWeight: "800", color: "#111" },

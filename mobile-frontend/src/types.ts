@@ -1,5 +1,16 @@
 export type Category = "food" | "sport" | "nature" | "culture" | "other";
 
+export type Review = {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1–5
+  reviewText: string;
+  adviceText?: string;
+  timestamp?: string;
+};
+
 export type PlaceCategory = "restaurant" | "cafe" | "bar" | "gym" | "park" | "museum" | "gallery" | "hotel" | "shop" | "other";
 
 export type PlaceEntry = {

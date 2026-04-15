@@ -4,12 +4,14 @@ import MapScreen from "../screens/MapScreen";
 import EventDetailsScreen from "../screens/EventDetailsScreen";
 import PlaceDetailsScreen from "../screens/PlaceDetailsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import ReviewScreen from "../screens/ReviewScreen";
 
 export type MapStackParamList = {
   MapMain: { date?: string } | undefined;
   EventDetails: { eventId: string };
   PlaceDetails: { placeId: string };
   UserProfile: { userId: string };
+  Reviews: { eventId: string };
 };
 
 const Stack = createNativeStackNavigator<MapStackParamList>();
@@ -21,6 +23,7 @@ export default function MapStack() {
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} />
       <Stack.Screen name="UserProfile" component={ProfileScreen} />
+      <Stack.Screen name="Reviews" component={ReviewScreen} />
     </Stack.Navigator>
   );
 }

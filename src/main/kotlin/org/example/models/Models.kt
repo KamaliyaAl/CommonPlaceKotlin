@@ -78,6 +78,18 @@ data class FriendRequest(
 )
 
 @Serializable
+data class Review(
+    val id: String = "",
+    val eventId: String = "",
+    val userId: String = "",
+    val userName: String = "",
+    val rating: Double = 0.0,
+    val reviewText: String = "",
+    val adviceText: String? = null,
+    val timestamp: String? = null
+)
+
+@Serializable
 data class FavouriteEvent(
     val id: String = "",
     val userId: String = "",

@@ -1,7 +1,6 @@
 package org.example.firebase
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.cloud.FirestoreClient
@@ -33,10 +32,27 @@ object FirebaseService {
 
     fun initialize() {
         if (FirebaseApp.getApps().isEmpty()) {
+            val credentials: GoogleCredentials = run {
+                val explicitPath = dotenv["FIREBASE_SERVICE_ACCOUNT_PATH"]
+                    ?: System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+                if (explicitPath != null) {
+                    val file = File(explicitPath)
+                    if (!file.exists()) error("Credentials file not found at: ${file.absolutePath}")
+                    logger.info("Loading Firebase credentials from: ${file.absolutePath}")
+                    GoogleCredentials.fromStream(FileInputStream(file))
+                        .createScoped("https://www.googleapis.com/auth/cloud-platform")
+                } else {
+                    logger.info("Loading Firebase credentials from Application Default Credentials")
+                    GoogleCredentials.getApplicationDefault()
+                        .createScoped("https://www.googleapis.com/auth/cloud-platform")
+                }
+            }
+
             val optionsBuilder = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(FileInputStream(File("commonplace1-firebase-adminsdk-fbsvc-fa57a72c94.json"))))
+                .setCredentials(credentials)
                 .setProjectId(projectId)
-                .setStorageBucket(storageBucket)
+                .apply { if (!storageBucket.isNullOrBlank()) setStorageBucket(storageBucket) }
 
             FirebaseApp.initializeApp(optionsBuilder.build())
             firestore = FirestoreClient.getFirestore()

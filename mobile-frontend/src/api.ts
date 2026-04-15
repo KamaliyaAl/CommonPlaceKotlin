@@ -41,8 +41,8 @@ export const api = {
         date: datePart,
         startTime: e.startTime,
         endTime: e.endTime,
-        rating: 4.5,
-        reviewsCount: 0,
+        rating: e.rating ?? undefined,
+        reviewsCount: e.reviewsCount ?? undefined,
         price: e.price,
         imageUri: e.imageUri || null,
         organizerId: e.organizerId || null,
@@ -234,8 +234,8 @@ export const api = {
         date: datePart,
         startTime: e.startTime,
         endTime: e.endTime,
-        rating: 4.5,
-        reviewsCount: 0,
+        rating: e.rating ?? undefined,
+        reviewsCount: e.reviewsCount ?? undefined,
         price: e.price,
         imageUri: e.imageUri || null,
         organizerId: e.organizerId || null,
@@ -278,5 +278,28 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to create place entry');
     return await response.json();
-  }
+  },
+
+  async getReviews(eventId: string, sortBy: 'rating' | 'date' = 'date'): Promise<import('./types').Review[]> {
+    const response = await fetch(`${API_URL}/reviews/${eventId}?sortBy=${sortBy}`);
+    if (!response.ok) throw new Error('Failed to fetch reviews');
+    return await response.json();
+  },
+
+  async submitReview(review: {
+    eventId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    reviewText: string;
+    adviceText?: string;
+  }): Promise<import('./types').Review> {
+    const response = await fetch(`${API_URL}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review),
+    });
+    if (!response.ok) throw new Error('Failed to submit review');
+    return await response.json();
+  },
 };
