@@ -76,6 +76,7 @@ fun Route.eventRoutes() {
             val minPrice = call.request.queryParameters["minPrice"]?.toDoubleOrNull()
             val maxPrice = call.request.queryParameters["maxPrice"]?.toDoubleOrNull()
             val organizerId = call.request.queryParameters["organizerId"]
+            val minStartTimeStr = call.request.queryParameters["minStartTime"] // ISO string or "now"
 
             val events = withLogging("GET filtered events") {
                 var firestoreQuery: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
@@ -96,6 +97,21 @@ fun Route.eventRoutes() {
                 if (!date.isNullOrBlank()) {
                     filtered = filtered.filter { 
                         it.startTime?.contains(date) == true || it.time?.contains(date) == true
+                    }
+                }
+
+                // In-memory filter for minStartTime
+                if (!minStartTimeStr.isNullOrBlank()) {
+                    val minInstant = if (minStartTimeStr == "now") {
+                        // Use start of today instead of exact "now" to show all of today's events
+                        Instant.now().atZone(java.time.ZoneOffset.UTC).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+                    } else try { Instant.parse(minStartTimeStr) } catch(e: Exception) { null }
+                    
+                    if (minInstant != null) {
+                        filtered = filtered.filter {
+                            val eventInstant = it.startTime?.let { s -> try { Instant.parse(s) } catch(e: Exception) { null } }
+                            eventInstant == null || eventInstant.isAfter(minInstant) || eventInstant.equals(minInstant)
+                        }
                     }
                 }
 

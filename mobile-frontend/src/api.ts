@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
-  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string }) {
+  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string; minStartTime?: string }) {
     let url = `${API_URL}/events`;
     if (filters) {
       const params = new URLSearchParams();
@@ -12,6 +12,7 @@ export const api = {
       if (filters.date) params.append('date', filters.date);
       if (filters.minPrice) params.append('minPrice', filters.minPrice);
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.minStartTime) params.append('minStartTime', filters.minStartTime);
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
     }

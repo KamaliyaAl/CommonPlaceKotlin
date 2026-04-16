@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     View,
     Text,
@@ -7,12 +7,18 @@ import {
     Pressable,
     Platform,
     FlatList,
+    Modal,
+    ScrollView,
+    KeyboardAvoidingView,
+    Keyboard,
+    TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { MapStackParamList } from "./MapStack";
 import { useEvents } from "../context/EventsContext";
 import { Place, Category, PlaceEntry, PlaceCategory } from "../types";
@@ -27,7 +33,16 @@ const LIMASSOL: Region = {
     longitudeDelta: 0.1,
 };
 
-const CATEGORY_LABEL: Record<Category, string> = {
+const CATEGORIES: { label: string; value: string }[] = [
+    { label: "All", value: "all" },
+    { label: "Food", value: "food" },
+    { label: "Sport", value: "sport" },
+    { label: "Nature", value: "nature" },
+    { label: "Culture", value: "culture" },
+    { label: "Other", value: "other" },
+];
+
+const CATEGORY_LABEL: Record<string, string> = {
     food: "Food",
     sport: "Sport",
     nature: "Nature",
@@ -46,6 +61,19 @@ const PLACE_CATEGORY_LABEL: Record<PlaceCategory, string> = {
     hotel: "Hotel",
     shop: "Shop",
     other: "Other",
+};
+
+const PLACE_TO_GENERAL_CATEGORY: Record<string, string> = {
+    restaurant: "food",
+    cafe: "food",
+    bar: "food",
+    gym: "sport",
+    park: "nature",
+    museum: "culture",
+    gallery: "culture",
+    hotel: "other",
+    shop: "other",
+    other: "other",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,24 +123,52 @@ type SelectedItem =
 
 export default function MapScreen() {
     const days = useMemo(() => getDaysArray(), []);
-    const [selectedDate, setSelectedDate] = useState(days[0]);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<MapStackParamList>>();
 
-    const { events } = useEvents();
     const [placeEntries, setPlaceEntries] = useState<PlaceEntry[]>([]);
+    const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
 
     const [query, setQuery] = useState("");
     const [selected, setSelected] = useState<SelectedItem>(null);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
+    // Filter states
+    const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+
+    // Internal modal states
+    const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
+    const [pendingMinPrice, setPendingMinPrice] = useState("");
+    const [pendingMaxPrice, setPendingMaxPrice] = useState("");
+
+    const mapRef = useRef<MapView>(null);
     const route = useRoute<any>();
+    
     useEffect(() => {
-        const incomingDate = route?.params?.date as string | undefined;
-        if (incomingDate && days.includes(incomingDate)) {
-            setSelectedDate(incomingDate);
+        const params = route?.params;
+        if (!params) return;
+
+        // If explicitly centering on an event
+        if (params.latitude && params.longitude) {
+            mapRef.current?.animateToRegion({
+                latitude: params.latitude,
+                longitude: params.longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+            }, 1000);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [route?.params?.date]);
+
+        if (params.eventId) {
+            setSelected({ kind: "event", id: params.eventId });
+        }
+
+        // Legacy: only keep date redir if provided without event centering
+        if (params.date && days.includes(params.date)) {
+            setSelectedDate(params.date);
+        }
+    }, [route?.params, days]);
 
     // Load place entries once on mount
     useEffect(() => {
@@ -121,52 +177,54 @@ export default function MapScreen() {
             .catch(console.error);
     }, []);
 
-    const [activeCategories, setActiveCategories] = useState<Set<Category>>(
-        () => new Set<Category>(["food", "sport", "nature", "culture", "other"])
-    );
+    const fetchEvents = useCallback(async () => {
+        try {
+            const res = await api.getEvents({
+                query,
+                categories: activeCategories,
+                date: selectedDate || undefined,
+                minPrice: minPrice || undefined,
+                maxPrice: maxPrice || undefined,
+                minStartTime: !selectedDate ? 'now' : undefined
+            });
+            setFilteredEvents(res);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice]);
 
-    const toggleCategory = (c: Category) => {
-        setActiveCategories((prev) => {
-            const next = new Set(prev);
-            if (next.has(c)) next.delete(c);
-            else next.add(c);
-            return next.size === 0
-                ? new Set<Category>(["food", "sport", "nature", "culture", "other"])
-                : next;
-        });
-    };
+    const isFocused = useIsFocused();
 
-    const filteredEvents = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        return events.filter((p) => {
-            if (p.date !== selectedDate) return false;
-            if (!activeCategories.has(p.category)) return false;
-            if (!q) return true;
-            return (
-                p.title.toLowerCase().includes(q) ||
-                p.description.toLowerCase().includes(q)
-            );
-        });
-    }, [events, query, activeCategories, selectedDate]);
+    useEffect(() => {
+        if (isFocused) {
+            fetchEvents();
+        }
+    }, [isFocused, fetchEvents]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchEvents();
+        }, 300);
+        return () => clearTimeout(delayDebounceFn);
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice]);
 
     const filteredPlaces = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return placeEntries;
-        return placeEntries.filter(
-            (p) =>
+        const cats = activeCategories;
+
+        return placeEntries.filter((p) => {
+            const matchesQuery = !q || (
                 p.name?.toLowerCase().includes(q) ||
                 p.description?.toLowerCase().includes(q) ||
                 p.address?.toLowerCase().includes(q)
-        );
-    }, [placeEntries, query]);
+            );
+            if (!matchesQuery) return false;
 
-    // Clear selection if the item scrolled out of filtered results
-    useEffect(() => {
-        if (!selected) return;
-        if (selected.kind === "event" && !filteredEvents.some((e) => e.id === selected.id)) {
-            setSelected(null);
-        }
-    }, [filteredEvents, selected]);
+            if (cats.includes("all")) return true;
+            const mappedCat = PLACE_TO_GENERAL_CATEGORY[p.category || "other"] || "other";
+            return cats.includes(mappedCat);
+        });
+    }, [placeEntries, query, activeCategories]);
 
     const selectedEvent = useMemo(
         () => selected?.kind === "event" ? filteredEvents.find((e) => e.id === selected.id) ?? null : null,
@@ -177,14 +235,51 @@ export default function MapScreen() {
         [filteredPlaces, selected]
     );
 
-    const categories: Category[] = ["food", "sport", "nature", "culture", "other"];
+    const handleCategoryPress = (val: string) => {
+        if (val === "all") {
+            setPendingCategories(["all"]);
+            return;
+        }
+        let newCats = pendingCategories.includes("all") ? [] : [...pendingCategories];
+        if (newCats.includes(val)) {
+            newCats = newCats.filter(c => c !== val);
+            if (newCats.length === 0) newCats = ["all"];
+        } else {
+            newCats.push(val);
+        }
+        setPendingCategories(newCats);
+    };
+
+    const applyFilters = () => {
+        setActiveCategories(pendingCategories);
+        setMinPrice(pendingMinPrice);
+        setMaxPrice(pendingMaxPrice);
+        setIsFiltersOpen(false);
+    };
+
+    const resetFilters = () => {
+        setPendingCategories(["all"]);
+        setPendingMinPrice("");
+        setPendingMaxPrice("");
+        setActiveCategories(["all"]);
+        setMinPrice("");
+        setMaxPrice("");
+        setIsFiltersOpen(false);
+    };
+
+    const openModal = () => {
+        setPendingCategories(activeCategories);
+        setPendingMinPrice(minPrice);
+        setPendingMaxPrice(maxPrice);
+        setIsFiltersOpen(true);
+    };
 
     const renderCalendarDay = useCallback(({ item }: { item: string }) => {
         const d = new Date(item);
         const isActive = item === selectedDate;
         return (
             <Pressable
-                onPress={() => setSelectedDate(item)}
+                onPress={() => setSelectedDate(selectedDate === item ? null : item)}
                 style={[styles.dayItem, isActive && styles.dayItemActive]}
             >
                 <Text style={[styles.dayWeekday, isActive && styles.dayTextActive]}>
@@ -199,6 +294,7 @@ export default function MapScreen() {
         <SafeAreaView style={styles.safe} edges={[]}>
             <View style={styles.container}>
                 <MapView
+                    ref={mapRef}
                     provider={PROVIDER_DEFAULT}
                     style={StyleSheet.absoluteFill}
                     initialRegion={LIMASSOL}
@@ -262,36 +358,13 @@ export default function MapScreen() {
                 {/* Filters button */}
                 <Pressable
                     style={styles.filtersBar}
-                    onPress={() => setIsFiltersOpen((v) => !v)}
+                    onPress={openModal}
                 >
-                    <Text style={styles.filtersText}>Filters</Text>
-                    <MaterialCommunityIcons
-                        name={isFiltersOpen ? "chevron-up" : "chevron-down"}
-                        size={26}
-                        color="#111"
-                    />
+                    <MaterialCommunityIcons name="tune" size={20} color="#111" />
+                    <Text style={styles.filtersText}>
+                        Filters {activeCategories.filter(c => c !== 'all').length > 0 ? `(${activeCategories.filter(c => c !== 'all').length})` : ""}
+                    </Text>
                 </Pressable>
-
-                {isFiltersOpen && (
-                    <View style={styles.filtersPanel}>
-                        <View style={styles.chipsWrap}>
-                            {categories.map((c) => {
-                                const active = activeCategories.has(c);
-                                return (
-                                    <Pressable
-                                        key={c}
-                                        onPress={() => toggleCategory(c)}
-                                        style={[styles.chip, active && styles.chipActive]}
-                                    >
-                                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                                            {CATEGORY_LABEL[c]}
-                                        </Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    </View>
-                )}
 
                 {/* Search */}
                 <View style={styles.searchWrap}>
@@ -320,13 +393,13 @@ export default function MapScreen() {
                         <View style={styles.ratingRow}>
                             <View style={styles.ratingBox}>
                                 <MaterialCommunityIcons name="star" size={14} color="#FFB800" />
-                                <Text style={styles.ratingText}>{selectedEvent.rating}</Text>
+                                <Text style={styles.ratingText}>{selectedEvent.rating || 0}</Text>
                             </View>
                         </View>
                         <Text style={styles.cardDesc} numberOfLines={2}>{selectedEvent.description}</Text>
                         <View style={styles.cardFooter}>
                             <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{CATEGORY_LABEL[selectedEvent.category]}</Text>
+                                <Text style={styles.badgeText}>{CATEGORY_LABEL[selectedEvent.category] || "Other"}</Text>
                             </View>
                             {selectedEvent.price && (
                                 <View style={[styles.badge, { backgroundColor: "#E6F4F1" }]}>
@@ -402,6 +475,104 @@ export default function MapScreen() {
                         </View>
                     </View>
                 )}
+
+                {/* Filter Modal */}
+                <Modal
+                    visible={isFiltersOpen}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setIsFiltersOpen(false)}
+                >
+                    <KeyboardAvoidingView 
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.modalOverlay}
+                    >
+                        <Pressable style={StyleSheet.absoluteFill} onPress={Keyboard.dismiss} />
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Map Filters</Text>
+                                <TouchableOpacity onPress={() => setIsFiltersOpen(false)}>
+                                    <MaterialCommunityIcons name="close" size={28} color="#111" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <Text style={styles.filterLabel}>Categories</Text>
+                                <View style={styles.chipsWrap}>
+                                    {CATEGORIES.map(c => (
+                                        <TouchableOpacity 
+                                            key={c.value} 
+                                            onPress={() => handleCategoryPress(c.value)}
+                                            style={[styles.chip, pendingCategories.includes(c.value) && styles.chipActive]}
+                                        >
+                                            <Text style={[styles.chipText, pendingCategories.includes(c.value) && styles.chipTextActive]}>
+                                                {c.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <Text style={[styles.filterLabel, { marginTop: 24 }]}>
+                                    Price Range: €{pendingMinPrice === "" ? 0 : pendingMinPrice} - €{pendingMaxPrice === "" ? 50 : pendingMaxPrice}
+                                </Text>
+                                
+                                <View style={styles.sliderWrap}>
+                                    <MultiSlider
+                                        values={[
+                                            pendingMinPrice === "" ? 0 : parseFloat(pendingMinPrice),
+                                            pendingMaxPrice === "" ? 50 : parseFloat(pendingMaxPrice),
+                                        ]}
+                                        min={0}
+                                        max={50}
+                                        step={2}
+                                        sliderLength={300}
+                                        allowOverlap={true}
+                                        snapped
+                                        enableLabel
+                                        onValuesChange={(vals) => {
+                                            const [min, max] = vals;
+                                            setPendingMinPrice(String(min));
+                                            setPendingMaxPrice(String(max));
+                                        }}
+                                        selectedStyle={styles.sliderSelected}
+                                        unselectedStyle={styles.sliderUnselected}
+                                        trackStyle={styles.sliderTrack}
+                                        containerStyle={styles.sliderContainer}
+                                        customMarker={() => <View style={styles.sliderThumb} />}
+                                        customLabel={(e) => {
+                                            const marker1 = e.oneMarkerLeftPosition ?? 0;
+                                            const marker2 = e.twoMarkerLeftPosition ?? 300;
+                                            return (
+                                                <View style={styles.labelsOverlay} pointerEvents="none">
+                                                    <View style={[styles.priceBubbleWrap, { left: marker1 }]}>
+                                                        <View style={styles.priceBubble}>
+                                                            <Text style={styles.priceBubbleText}>€{e.oneMarkerValue ?? 0}</Text>
+                                                        </View>
+                                                        <View style={styles.priceBubbleArrow} />
+                                                    </View>
+                                                    <View style={[styles.priceBubbleWrap, { left: marker2 }]}>
+                                                        <View style={styles.priceBubble}>
+                                                            <Text style={styles.priceBubbleText}>€{e.twoMarkerValue ?? 50}</Text>
+                                                        </View>
+                                                        <View style={styles.priceBubbleArrow} />
+                                                    </View>
+                                                </View>
+                                            );
+                                        }}
+                                    />
+                                </View>
+
+                                <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
+                                    <Text style={styles.applyText}>Apply Filters</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
+                                    <Text style={styles.resetText}>Reset All</Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
+                    </KeyboardAvoidingView>
+                </Modal>
             </View>
         </SafeAreaView>
     );
@@ -461,44 +632,134 @@ const styles = StyleSheet.create({
     dayNumber: { fontSize: 18, fontWeight: "800", color: "#111" },
     dayTextActive: { color: "#fff" },
 
-    // Filters
+    // Filters Bar
     filtersBar: {
         position: "absolute",
         top: Platform.OS === "ios" ? 100 : 90,
         left: 18,
-        right: 18,
-        height: 50,
-        borderRadius: 16,
-        backgroundColor: "#8FB4B2",
+        height: 44,
+        paddingHorizontal: 12,
+        borderRadius: 22,
+        backgroundColor: "#fff",
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 16,
-        justifyContent: "space-between",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: "#e6e6e6",
+        elevation: 3,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
         zIndex: 5,
     },
-    filtersText: { fontSize: 18, fontWeight: "800" },
-    filtersPanel: {
-        position: "absolute",
-        top: Platform.OS === "ios" ? 160 : 150,
-        left: 18,
-        right: 18,
-        padding: 12,
-        borderRadius: 16,
-        backgroundColor: "rgba(255,255,255,0.95)",
-        zIndex: 10,
+    filtersText: { fontSize: 14, fontWeight: "700" },
+
+    // Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#111',
+    },
+    filterLabel: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#111',
+        marginBottom: 12,
     },
     chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     chip: {
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 999,
-        backgroundColor: "#fff",
+        borderRadius: 20,
+        backgroundColor: "#eee",
         borderWidth: 1,
         borderColor: "#ccc",
     },
-    chipActive: { backgroundColor: "#111" },
-    chipText: { fontWeight: "700" },
+    chipActive: { backgroundColor: "#111", borderColor: "#111" },
+    chipText: { fontWeight: "700", color: "#555" },
     chipTextActive: { color: "#fff" },
+
+    // Slider
+    sliderWrap: {
+        marginTop: 18,
+        paddingTop: 58,
+        width: 376,
+        alignSelf: "center",
+        position: "relative",
+    },
+    sliderContainer: { width: 300, alignSelf: "center" },
+    labelsOverlay: {
+        position: "absolute",
+        top: -58,
+        left: 38,
+        width: 300,
+        height: 52,
+        overflow: "visible",
+    },
+    priceBubbleWrap: {
+        position: "absolute",
+        width: 76,
+        marginLeft: -38,
+        alignItems: "center",
+    },
+    priceBubble: {
+        width: 76,
+        paddingVertical: 10,
+        borderRadius: 16,
+        backgroundColor: "#3A3A3A",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    priceBubbleText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+    priceBubbleArrow: {
+        marginTop: -4,
+        width: 14,
+        height: 14,
+        backgroundColor: "#3A3A3A",
+        transform: [{ rotate: "45deg" }],
+    },
+    sliderTrack: { height: 8, borderRadius: 4 },
+    sliderUnselected: { backgroundColor: "#CFCFCF" },
+    sliderSelected: { backgroundColor: "#444" },
+    sliderThumb: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: "#2A2A2A",
+        borderWidth: 4,
+        borderColor: "#F3F3F3",
+    },
+
+    // Buttons
+    applyBtn: {
+        backgroundColor: '#111',
+        height: 54,
+        borderRadius: 27,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 32,
+    },
+    applyText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+    resetBtn: { alignItems: 'center', marginTop: 16, paddingBottom: 20 },
+    resetText: { color: '#666', fontSize: 16, fontWeight: '600' },
 
     // Search
     searchWrap: {
@@ -522,7 +783,7 @@ const styles = StyleSheet.create({
     },
     searchInput: { flex: 1, fontSize: 16 },
 
-    // Bottom card shared
+    // Bottom card
     bottomCard: {
         position: "absolute",
         left: 18,
@@ -574,3 +835,4 @@ const styles = StyleSheet.create({
     openBadgeTextOpen: { color: "#1E8449" },
     openBadgeTextClosed: { color: "#C0392B" },
 });
+

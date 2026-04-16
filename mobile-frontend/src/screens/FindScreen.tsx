@@ -260,7 +260,20 @@ export default function FindScreen() {
                 </Text>
                 <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
               </View>
-              <Text style={s.mapText}>Show on the map</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  (navigation as any).navigate('Map', { 
+                    screen: 'MapMain',
+                    params: {
+                      eventId: item.id,
+                      latitude: item.lat,
+                      longitude: item.lng
+                    }
+                  });
+                }}
+              >
+                <Text style={s.mapText}>Show on the map</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
