@@ -6,6 +6,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.google.cloud.Timestamp
 import com.google.cloud.firestore.QueryDocumentSnapshot
+import com.google.cloud.firestore.DocumentSnapshot
 import org.example.firebase.FirebaseService
 import org.example.models.Event
 import org.example.database.withLogging
@@ -14,7 +15,7 @@ import java.time.Instant
 fun Route.eventRoutes() {
     val collection = "Events"
 
-    fun docToEvent(doc: QueryDocumentSnapshot): Event {
+    fun docToEvent(doc: DocumentSnapshot): Event {
         fun getStringOrTimestamp(field: String): String? {
             return try {
                 val value = doc.get(field)
@@ -74,6 +75,7 @@ fun Route.eventRoutes() {
             val queryParam = call.request.queryParameters["query"]?.lowercase()
             val minPrice = call.request.queryParameters["minPrice"]?.toDoubleOrNull()
             val maxPrice = call.request.queryParameters["maxPrice"]?.toDoubleOrNull()
+            val organizerId = call.request.queryParameters["organizerId"]
 
             val events = withLogging("GET filtered events") {
                 var firestoreQuery: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
@@ -81,6 +83,10 @@ fun Route.eventRoutes() {
                 // Firestore IN query for multiple categories (supports up to 10 elements)
                 if (categories.isNotEmpty()) {
                     firestoreQuery = firestoreQuery.whereIn("category", categories)
+                }
+                
+                if (!organizerId.isNullOrBlank()) {
+                    firestoreQuery = firestoreQuery.whereEqualTo("organizerId", organizerId)
                 }
 
                 val documents = firestoreQuery.get().get()
@@ -130,7 +136,7 @@ fun Route.eventRoutes() {
                 if (!doc.exists()) {
                     null
                 } else {
-                    docToEvent(doc as QueryDocumentSnapshot)
+                    docToEvent(doc)
                 }
             }
             if (event == null) {

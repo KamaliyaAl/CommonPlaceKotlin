@@ -25,24 +25,13 @@ import kotlin.test.assertEquals
 
 class ProfileIntegrationTest {
 
-    private lateinit var mockFirestore: Firestore
-    private lateinit var mockCollection: CollectionReference
-
     @BeforeTest
     fun setup() {
-        mockFirestore = mockk(relaxed = true)
-        mockCollection = mockk(relaxed = true)
-        
-        // Mock the basic firestore interactions
-        every { mockFirestore.collection("Profile") } returns mockCollection
+        FirebaseService.initialize()
     }
 
     @Test
-    fun testAddAndGetProfileWithMock() = testApplication {
-        // Manually set the mock firestore to avoid real connection issues in CI
-        FirebaseService.firestore = mockFirestore
-
-        // Configure the test application
+    fun testProfileLifecycle() = testApplication {
         application {
             configurePlugins()
             configureRouting()
@@ -54,161 +43,64 @@ class ProfileIntegrationTest {
             }
         }
 
-        // 1. Mock POST behavior
-        val mockDocRef = mockk<DocumentReference>()
-        every { mockDocRef.id } returns "test-id-123"
-        every { mockCollection.document() } returns mockDocRef
-        every { mockDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
+        val testEmail = "test_profile_${System.currentTimeMillis()}@example.com"
+        val testPassword = "password123"
 
-        // 2. Mock GET (all) behavior
-        val mockQuerySnapshot = mockk<QuerySnapshot>()
-        every { mockQuerySnapshot.iterator() } returns mutableListOf<QueryDocumentSnapshot>().iterator()
-        every { mockCollection.get() } returns ApiFutures.immediateFuture(mockQuerySnapshot)
-
-        // 3. Mock GET (by ID) behavior
-        val mockDocSnapshot = mockk<DocumentSnapshot>()
-        every { mockDocSnapshot.exists() } returns true
-        every { mockDocSnapshot.id } returns "test-id-123"
-        every { mockDocSnapshot.getString("name") } returns "Test User"
-        every { mockDocSnapshot.getLong("age") } returns 30L
-        every { mockDocSnapshot.getBoolean("gender") } returns true
-        every { mockDocSnapshot.getString("email") } returns "test@example.com"
-        every { mockDocSnapshot.getString("password") } returns "securepassword"
-        every { mockDocSnapshot.getBoolean("isAdmin") } returns false
-        
-        val mockGetDocRef = mockk<DocumentReference>()
-        every { mockCollection.document("test-id-123") } returns mockGetDocRef
-        every { mockGetDocRef.get() } returns ApiFutures.immediateFuture(mockDocSnapshot)
-
-        // --- Execution ---
-
-        // Test POST /api/profiles
-        val newProfile = Profile(
-            name = "Test User",
-            age = 30,
-            gender = true,
-            email = "test@example.com",
-            password = "securepassword"
+        // 1. Create a new profile via Account route
+        val profileReq = Profile(
+            name = "Integration Test User",
+            email = testEmail,
+            password = testPassword,
+            age = 25,
+            gender = true
         )
 
-        val postResponse = client.post("/api/profiles") {
+        val createRes = client.post("/api/account") {
             contentType(ContentType.Application.Json)
-            setBody(newProfile)
+            setBody(profileReq)
         }
+        assertEquals(HttpStatusCode.Created, createRes.status)
+        val createdProfile = createRes.body<Profile>()
+        val profileId = createdProfile.id
 
-        assertEquals(HttpStatusCode.Created, postResponse.status)
-        val createdProfile = postResponse.body<Profile>()
-        assertEquals("test-id-123", createdProfile.id)
+        try {
+            // 2. Test Login
+            val loginReq = LoginRequest(testEmail, testPassword)
+            val loginRes = client.post("/api/profiles/login") {
+                contentType(ContentType.Application.Json)
+                setBody(loginReq)
+            }
+            assertEquals(HttpStatusCode.OK, loginRes.status)
+            val loggedInProfile = loginRes.body<Profile>()
+            assertEquals(profileId, loggedInProfile.id)
 
-        // Test GET /api/profiles/{id}
-        val getResponse = client.get("/api/profiles/test-id-123")
-        assertEquals(HttpStatusCode.OK, getResponse.status)
-        val fetchedProfile = getResponse.body<Profile>()
-        assertEquals("Test User", fetchedProfile.name)
-        assertEquals("test-id-123", fetchedProfile.id)
+            // 3. Test GET profile by ID
+            val getRes = client.get("/api/profiles/$profileId")
+            assertEquals(HttpStatusCode.OK, getRes.status)
+            assertEquals("Integration Test User", getRes.body<Profile>().name)
+
+            // 4. Test PUT update profile
+            val updateReq = profileReq.copy(name = "Updated Name")
+            val putRes = client.put("/api/account/$profileId") {
+                contentType(ContentType.Application.Json)
+                setBody(updateReq)
+            }
+            assertEquals(HttpStatusCode.OK, putRes.status)
+            
+            // Verify update
+            val getUpdatedRes = client.get("/api/profiles/$profileId")
+            assertEquals("Updated Name", getUpdatedRes.body<Profile>().name)
+
+        } finally {
+            // 5. Cleanup: DELETE profile
+            val deleteRes = client.delete("/api/account/$profileId")
+            assertEquals(HttpStatusCode.NoContent, deleteRes.status)
+        }
     }
 
     @Test
-    fun testAccountEndpoints() = testApplication {
-        FirebaseService.firestore = mockFirestore
-        application {
-            configurePlugins()
-            configureRouting()
-        }
-        val client = createClient {
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-        }
-
-        // Mock for signup (email search)
-        val mockQuerySnapshot = mockk<QuerySnapshot>()
-        every { mockQuerySnapshot.isEmpty } returns true
-        every { mockCollection.whereEqualTo("email", "new@example.com").get() } returns ApiFutures.immediateFuture(mockQuerySnapshot)
-        
-        val mockDocRef = mockk<DocumentReference>()
-        every { mockDocRef.id } returns "new-id"
-        every { mockCollection.document() } returns mockDocRef
-        every { mockDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
-
-        // 1. POST /api/account
-        val newProfile = Profile(name = "New User", email = "new@example.com", password = "password", gender = false)
-        val postResponse = client.post("/api/account") {
-            contentType(ContentType.Application.Json)
-            setBody(newProfile)
-        }
-        assertEquals(HttpStatusCode.Created, postResponse.status)
-        assertEquals("new-id", postResponse.body<Profile>().id)
-
-        // 2. PUT /api/account/{id}
-        val mockDocSnapshot = mockk<DocumentSnapshot>()
-        every { mockDocSnapshot.exists() } returns true
-        every { mockDocSnapshot.getBoolean("isAdmin") } returns false
-        val mockGetDocRef = mockk<DocumentReference>()
-        every { mockCollection.document("new-id") } returns mockGetDocRef
-        every { mockGetDocRef.get() } returns ApiFutures.immediateFuture(mockDocSnapshot)
-        every { mockGetDocRef.set(any()) } returns ApiFutures.immediateFuture(null)
-
-        val putResponse = client.put("/api/account/new-id") {
-            contentType(ContentType.Application.Json)
-            setBody(newProfile.copy(name = "Updated User"))
-        }
-        assertEquals(HttpStatusCode.OK, putResponse.status)
-
-        // 3. DELETE /api/account/{id}
-        every { mockGetDocRef.delete() } returns ApiFutures.immediateFuture(null)
-        val deleteResponse = client.delete("/api/account/new-id")
-        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
-    }
-
-    @Test
-    fun testLogin() = testApplication {
-        FirebaseService.firestore = mockFirestore
-        application {
-            configurePlugins()
-            configureRouting()
-        }
-        val client = createClient {
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-        }
-
-        // 1. Mock GET behavior (email search for login)
-        val mockQuerySnapshot = mockk<QuerySnapshot>()
-        val mockDocSnapshot = mockk<QueryDocumentSnapshot>()
-        
-        every { mockDocSnapshot.id } returns "test-login-id"
-        every { mockDocSnapshot.getString("name") } returns "Admin User"
-        every { mockDocSnapshot.getLong("age") } returns 25L
-        every { mockDocSnapshot.getBoolean("gender") } returns false
-        every { mockDocSnapshot.getString("email") } returns "admin@example.com"
-        every { mockDocSnapshot.getString("password") } returns "admin123"
-        every { mockDocSnapshot.getBoolean("isAdmin") } returns true
-        
-        every { mockQuerySnapshot.isEmpty } returns false
-        every { mockQuerySnapshot.documents } returns listOf(mockDocSnapshot)
-        
-        every { mockCollection.whereEqualTo("email", "admin@example.com").get() } returns ApiFutures.immediateFuture(mockQuerySnapshot)
-
-        // 2. Perform LOGIN
-        val loginReq = LoginRequest("admin@example.com", "admin123")
-        val response = client.post("/api/profiles/login") {
-            contentType(ContentType.Application.Json)
-            setBody(loginReq)
-        }
-
-        assertEquals(HttpStatusCode.OK, response.status)
-        val profile = response.body<Profile>()
-        assertEquals("test-login-id", profile.id)
-        assertEquals(true, profile.isAdmin)
-    }
-
-    @Test
-    fun testFirebaseInitializationWithEmulatorProperty() {
-        // Set emulator host via system property
-        System.setProperty("FIRESTORE_EMULATOR_HOST", "localhost:8081")
-        
-        // This should not throw even if no emulator is running
+    fun testFirebaseInitialization() {
+        // Simple sanity check that initialize doesn't throw
         FirebaseService.initialize()
-        
-        // Cleanup
-        System.clearProperty("FIRESTORE_EMULATOR_HOST")
     }
 }
