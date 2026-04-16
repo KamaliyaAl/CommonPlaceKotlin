@@ -14,6 +14,7 @@ export type ListStackParamList = {
   EventDetails: { eventId: string };
   UserProfile: { userId: string };
   Reviews: { eventId: string };
+  OrganizerMenu: undefined;
 };
 
 const Stack = createNativeStackNavigator<ListStackParamList>();
@@ -27,6 +28,7 @@ export default function ListStack() {
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
       <Stack.Screen name="UserProfile" component={ProfileScreen} />
       <Stack.Screen name="Reviews" component={ReviewScreen} />
+      <Stack.Screen name="OrganizerMenu" component={require("../screens/OrganizerMenuScreen").default} />
     </Stack.Navigator>
   );
 }

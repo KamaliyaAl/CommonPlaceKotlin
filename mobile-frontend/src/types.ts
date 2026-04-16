@@ -44,4 +44,5 @@ export type Place = {
   price?: string | null;
   liked?: boolean;
   organizerId?: string | null;
+  geopositionId?: string | null;
 };

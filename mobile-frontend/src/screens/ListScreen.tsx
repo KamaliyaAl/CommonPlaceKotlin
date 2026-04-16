@@ -38,7 +38,10 @@ export default function ListScreen() {
                     <Text style={s.buttonText}>Find</Text>
           </TouchableOpacity>
             <View style={s.spacer} />
-            <ActionButton title="My Events" />
+            <ActionButton 
+              title="Organizer Menu" 
+              onPress={() => navigation.navigate("OrganizerMenu")}
+            />
           </View>
 
           <View style={s.rowMarginTop} />

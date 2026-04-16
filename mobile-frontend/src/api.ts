@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
-  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string; minStartTime?: string }) {
+  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string; minStartTime?: string; organizerId?: string }) {
     let url = `${API_URL}/events`;
     if (filters) {
       const params = new URLSearchParams();
@@ -13,6 +13,7 @@ export const api = {
       if (filters.minPrice) params.append('minPrice', filters.minPrice);
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       if (filters.minStartTime) params.append('minStartTime', filters.minStartTime);
+      if (filters.organizerId) params.append('organizerId', filters.organizerId);
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
     }
@@ -47,6 +48,7 @@ export const api = {
         price: e.price,
         imageUri: e.imageUri || null,
         organizerId: e.organizerId || null,
+        geopositionId: e.geopositionId,
       };
     });
   },
@@ -85,6 +87,34 @@ export const api = {
       ...event,
       id: newEvent.id
     };
+  },
+  
+  async updateEvent(id: string, event: any) {
+    const response = await fetch(`${API_URL}/events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: event.title,
+        description: event.description,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        category: event.category,
+        price: event.price,
+        imageUri: event.imageUri,
+        organizerId: event.organizerId,
+        geopositionId: event.geopositionId
+      })
+    });
+    if (!response.ok) throw new Error('Failed to update event');
+    return await response.json();
+  },
+
+  async deleteEvent(id: string) {
+    const response = await fetch(`${API_URL}/events/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete event');
+    return true;
   },
 
   async getProfiles() {
@@ -240,6 +270,7 @@ export const api = {
         price: e.price,
         imageUri: e.imageUri || null,
         organizerId: e.organizerId || null,
+        geopositionId: e.geopositionId,
       };
     });
   },

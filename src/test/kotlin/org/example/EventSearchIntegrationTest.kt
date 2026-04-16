@@ -105,6 +105,19 @@ class EventSearchIntegrationTest {
             assertTrue(dateEvents.any { it.id == id1 })
             assertTrue(dateEvents.any { it.id == id3 })
 
+            // 6. Test Event Update (PUT)
+            val updatedName = "$testMarker Updated Party"
+            val updatePayload = createdEvent1.copy(name = updatedName)
+            val putRes = client.put("/api/events/$id1") {
+                contentType(ContentType.Application.Json)
+                setBody(updatePayload)
+            }
+            assertEquals(HttpStatusCode.OK, putRes.status)
+            
+            val fetchAfterUpdate = client.get("/api/events/$id1").body<Event>()
+            assertEquals(updatedName, fetchAfterUpdate.name)
+            assertEquals(testOrganizerId, fetchAfterUpdate.organizerId, "OrganizerId should be preserved during update")
+
         } finally {
             // Cleanup
             client.delete("/api/events/$id1")
