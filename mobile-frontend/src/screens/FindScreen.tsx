@@ -65,13 +65,9 @@ function DayPill({ d, n, active }: { d: string; n: number; active?: boolean }) {
 const formatTime = (isoString?: string | null) => {
   if (!isoString) return "?";
   if (!isoString.includes("T")) return isoString;
-  try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return isoString;
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  } catch (e) {
-    return isoString;
-  }
+  const timePart = isoString.split("T")[1];
+  if (!timePart) return "?";
+  return timePart.slice(0, 5); // HH:mm as stored (Cyprus local time)
 };
 
 export default function FindScreen() {

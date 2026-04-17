@@ -108,8 +108,13 @@ fun Route.eventRoutes() {
                     } else try { Instant.parse(minStartTimeStr) } catch(e: Exception) { null }
                     
                     if (minInstant != null) {
+                        val cyprusZone = java.time.ZoneId.of("Asia/Nicosia")
                         filtered = filtered.filter {
-                            val eventInstant = it.startTime?.let { s -> try { Instant.parse(s) } catch(e: Exception) { null } }
+                            val eventInstant = it.startTime?.let { s ->
+                                try { Instant.parse(s) } catch(e: Exception) {
+                                    try { java.time.LocalDateTime.parse(s).atZone(cyprusZone).toInstant() } catch(e2: Exception) { null }
+                                }
+                            }
                             eventInstant == null || eventInstant.isAfter(minInstant) || eventInstant.equals(minInstant)
                         }
                     }
@@ -171,8 +176,8 @@ fun Route.eventRoutes() {
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,
                 "organizerId" to event.organizerId,
-                "startTime" to event.startTime?.toTimestamp(),
-                "endTime" to event.endTime?.toTimestamp(),
+                "startTime" to event.startTime,
+                "endTime" to event.endTime,
                 "price" to event.price,
                 "category" to event.category,
                 "imageUri" to event.imageUri,
@@ -195,8 +200,8 @@ fun Route.eventRoutes() {
                 "description" to event.description,
                 "geopositionId" to event.geopositionId,
                 "organizerId" to event.organizerId,
-                "startTime" to event.startTime?.toTimestamp(),
-                "endTime" to event.endTime?.toTimestamp(),
+                "startTime" to event.startTime,
+                "endTime" to event.endTime,
                 "price" to event.price,
                 "category" to event.category,
                 "imageUri" to event.imageUri,
