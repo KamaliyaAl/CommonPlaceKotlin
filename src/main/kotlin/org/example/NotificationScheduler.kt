@@ -91,9 +91,9 @@ object NotificationScheduler {
 
             val notifType = if (is24h) "24h" else "1h"
             val notifText = if (is24h)
-                "До мероприятия «$eventTitle» осталось 24 часа!"
+                "\"$eventTitle\" starts in 24 hours!"
             else
-                "До мероприятия «$eventTitle» остался 1 час!"
+                "\"$eventTitle\" starts in 1 hour!"
 
             for (regDoc in regDocs) {
                 val userId = regDoc.getString("userId") ?: continue

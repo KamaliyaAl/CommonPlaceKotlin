@@ -78,7 +78,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <Text style={s.title}>History</Text>
+      <Text style={s.title}>Joined Events</Text>
 
       {loading ? (
         <View style={s.center}>

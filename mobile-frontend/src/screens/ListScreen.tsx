@@ -38,8 +38,8 @@ export default function ListScreen() {
                     <Text style={s.buttonText}>Find</Text>
           </TouchableOpacity>
             <View style={s.spacer} />
-            <ActionButton 
-              title="Organizer Menu" 
+            <ActionButton
+              title="My Events"
               onPress={() => navigation.navigate("OrganizerMenu")}
             />
           </View>
@@ -51,7 +51,7 @@ export default function ListScreen() {
                               <Text style={s.buttonText}>Favourites</Text>
            </TouchableOpacity>
             <View style={s.spacer} />
-            <ActionButton title="History" onPress={() => navigation.navigate("History")} />
+            <ActionButton title="Joined Events" onPress={() => navigation.navigate("History")} />
           </View>
         </View>
       </SafeAreaView>

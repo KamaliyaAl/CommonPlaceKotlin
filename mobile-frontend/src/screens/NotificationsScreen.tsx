@@ -65,10 +65,10 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#111" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Уведомления</Text>
+        <Text style={s.headerTitle}>Notifications</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllRead} style={s.readAllBtn}>
-            <Text style={s.readAllText}>Прочитать все</Text>
+            <Text style={s.readAllText}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -76,7 +76,7 @@ export default function NotificationsScreen() {
       {notifications.length === 0 ? (
         <View style={s.empty}>
           <MaterialCommunityIcons name="bell-off-outline" size={56} color="#ccc" />
-          <Text style={s.emptyText}>Нет уведомлений</Text>
+          <Text style={s.emptyText}>No notifications yet</Text>
         </View>
       ) : (
         <FlatList

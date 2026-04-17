@@ -227,7 +227,7 @@ export default function OrganizerMenuScreen() {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
                     <MaterialCommunityIcons name="arrow-left" size={28} color="#4A4A4A" />
                 </TouchableOpacity>
-                <Text style={s.headerTitle}>Organizer Menu</Text>
+                <Text style={s.headerTitle}>My Events</Text>
             </View>
 
             <FlatList
