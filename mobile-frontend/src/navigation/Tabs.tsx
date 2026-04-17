@@ -9,6 +9,7 @@ import ListStack from "../screens/ListStack";
 import MapStack from "../screens/MapStack";
 import ProfileScreen from "../screens/ProfileScreen";
 import UsersListScreen from "../screens/UsersListScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 
 export type BottomTabParamList = {
     AddTab: undefined;
@@ -54,6 +55,7 @@ function ProfileNavigator() {
     return (
         <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
             <ProfileStack.Screen name="MyProfile" component={ProfileScreen} />
+            <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />
         </ProfileStack.Navigator>
     );
 }

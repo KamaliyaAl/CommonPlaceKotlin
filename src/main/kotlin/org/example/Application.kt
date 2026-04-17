@@ -20,6 +20,7 @@ import java.io.File
 
 fun main() {
     FirebaseService.initialize()
+    NotificationScheduler.start()
 
     embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
         configurePlugins()
@@ -78,6 +79,8 @@ fun Application.configureRouting() {
         placesRoutes()
         placeEntryRoutes()
         reviewRoutes()
+        registrationRoutes()
+        notificationRoutes()
 
         // Serve static files from the frontend/dist directory if it exists
         val distDir = File("frontend/dist")

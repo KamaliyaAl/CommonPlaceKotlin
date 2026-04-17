@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEvents } from "../context/EventsContext";
+import { useAuth } from "../auth/AuthContext";
 import { Category } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
 import { api } from "../api";
@@ -39,25 +40,34 @@ export default function EventDetailsScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { events, toggleFavourite, isFavourite } = useEvents();
+  const { user } = useAuth();
 
   const eventId: string | undefined = route?.params?.eventId;
   const event = useMemo(() => events.find(e => e.id === eventId), [events, eventId]);
+
   const [joined, setJoined] = useState(false);
+  const [joiningLoading, setJoiningLoading] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
   const [loadingOrganizer, setLoadingOrganizer] = useState(false);
 
+  // Load organizer profile
   useEffect(() => {
     const organizerId = event?.organizerId;
-    if (!organizerId) {
-      setOrganizer(null);
-      return;
-    }
+    if (!organizerId) { setOrganizer(null); return; }
     setLoadingOrganizer(true);
     api.getProfile(organizerId)
       .then(setOrganizer)
       .catch(() => setOrganizer(null))
       .finally(() => setLoadingOrganizer(false));
   }, [event?.organizerId]);
+
+  // Load initial join state from backend
+  useEffect(() => {
+    if (!user?.uid || !eventId) return;
+    api.getRegistrations(user.uid)
+      .then(regs => setJoined(regs.some(r => r.eventId === eventId)))
+      .catch(() => {});
+  }, [user?.uid, eventId]);
 
   if (!event) {
     return (
@@ -73,12 +83,28 @@ export default function EventDetailsScreen() {
     );
   }
 
-  const onJoin = () => {
-    setJoined((prev) => {
-      const next = !prev;
-      Alert.alert(next ? "Joined" : "Unjoined", `${event.title}`);
-      return next;
-    });
+  const onJoin = async () => {
+    if (!user?.uid) {
+      Alert.alert("Sign in required", "Please sign in to join events.");
+      return;
+    }
+    if (joiningLoading) return;
+    setJoiningLoading(true);
+    try {
+      if (joined) {
+        await api.unjoinEvent(user.uid, event.id);
+        setJoined(false);
+        Alert.alert("Unjoined", `You left «${event.title}»`);
+      } else {
+        await api.joinEvent(user.uid, event.id);
+        setJoined(true);
+        Alert.alert("Joined!", `You joined «${event.title}»`);
+      }
+    } catch {
+      Alert.alert("Error", "Could not update registration. Try again.");
+    } finally {
+      setJoiningLoading(false);
+    }
   };
 
   const onShowOnMap = () => {
@@ -210,8 +236,11 @@ export default function EventDetailsScreen() {
           </View>
 
           <View style={s.btnRow}>
-            <TouchableOpacity style={[s.btn, s.joinBtn]} onPress={onJoin}>
-              <MaterialCommunityIcons name={joined ? "account-remove-outline" : "account-plus-outline"} size={20} color="#fff" />
+            <TouchableOpacity style={[s.btn, s.joinBtn, joined && s.joinBtnActive]} onPress={onJoin} disabled={joiningLoading}>
+              {joiningLoading
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <MaterialCommunityIcons name={joined ? "account-remove-outline" : "account-plus-outline"} size={20} color="#fff" />
+              }
               <Text style={s.btnText}>{joined ? "Unjoin" : "Join"}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.btn, s.mapBtn]} onPress={onShowOnMap}>
@@ -287,6 +316,7 @@ const s = StyleSheet.create({
   btnRow: { flexDirection: "row", alignItems: "center", marginTop: 20 },
   btn: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginRight: 12 },
   joinBtn: { backgroundColor: "#3B7D7A" },
+  joinBtnActive: { backgroundColor: "#2a5a57" },
   mapBtn: { backgroundColor: "#E6E6E6" },
   btnText: { marginLeft: 8, color: "#fff", fontWeight: "700" },
   heartBtn: { padding: 4 },

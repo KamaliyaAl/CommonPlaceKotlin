@@ -51,7 +51,7 @@ export default function ListScreen() {
                               <Text style={s.buttonText}>Favourites</Text>
            </TouchableOpacity>
             <View style={s.spacer} />
-            <ActionButton title="History" />
+            <ActionButton title="History" onPress={() => navigation.navigate("History")} />
           </View>
         </View>
       </SafeAreaView>

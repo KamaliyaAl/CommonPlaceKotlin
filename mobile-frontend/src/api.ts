@@ -334,4 +334,52 @@ export const api = {
     if (!response.ok) throw new Error('Failed to submit review');
     return await response.json();
   },
+
+  // Registrations (Join/Unjoin)
+  async joinEvent(userId: string, eventId: string): Promise<import('./types').EventRegistration | null> {
+    const response = await fetch(`${API_URL}/registrations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, eventId }),
+    });
+    if (response.status === 409) return null; // already joined
+    if (!response.ok) throw new Error('Failed to join event');
+    return await response.json();
+  },
+
+  async unjoinEvent(userId: string, eventId: string): Promise<void> {
+    const response = await fetch(`${API_URL}/registrations`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, eventId }),
+    });
+    if (!response.ok) throw new Error('Failed to unjoin event');
+  },
+
+  async getRegistrations(userId: string): Promise<import('./types').EventRegistration[]> {
+    const response = await fetch(`${API_URL}/registrations/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch registrations');
+    return await response.json();
+  },
+
+  // Notifications
+  async getNotifications(userId: string): Promise<import('./types').AppNotification[]> {
+    const response = await fetch(`${API_URL}/notifications/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch notifications');
+    return await response.json();
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+      method: 'PUT',
+    });
+    if (!response.ok) throw new Error('Failed to mark notification as read');
+  },
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    const response = await fetch(`${API_URL}/notifications/read-all/${userId}`, {
+      method: 'PUT',
+    });
+    if (!response.ok) throw new Error('Failed to mark all notifications as read');
+  },
 };

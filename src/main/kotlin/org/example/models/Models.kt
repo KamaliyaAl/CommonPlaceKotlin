@@ -112,3 +112,23 @@ data class PlaceEntry(
     val imageUri: String? = null,
     val organizerId: String? = null
 )
+
+@Serializable
+data class EventRegistration(
+    val id: String = "",
+    val userId: String = "",
+    val eventId: String = "",
+    val joinedAt: String = ""
+)
+
+@Serializable
+data class Notification(
+    val id: String = "",
+    val userId: String = "",
+    val eventId: String = "",
+    val eventTitle: String = "",
+    val text: String = "",
+    val sentAt: String = "",
+    val read: Boolean = false,
+    val type: String = "" // "24h" | "1h"
+)

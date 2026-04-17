@@ -33,6 +33,9 @@ dependencies {
     // dotenv for reading .env.local
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.0")
 
+    // Coroutines (for NotificationScheduler)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")

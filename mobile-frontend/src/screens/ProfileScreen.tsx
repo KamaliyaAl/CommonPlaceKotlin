@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useIsFocused, useRoute, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth, User } from "../auth/AuthContext";
 import AuthModal from "./AuthModal"; // если файл рядом в src/screens
 import EditInterestsModal from "./EditInterestsModal";
 import EditProfileModal from "./EditProfileModal";
 import { api } from "../api";
+import { useNotifications } from "../context/NotificationContext";
 
 function Pill({ label }: { label: string }) {
   return (
@@ -18,6 +20,7 @@ function Pill({ label }: { label: string }) {
 
 export default function ProfileScreen() {
   const { user: currentUser, loading: authLoading, signOut, updateProfile } = useAuth();
+  const { unreadCount } = useNotifications();
   const route = useRoute<any>();
   const navigation = useNavigation();
   const userId = route.params?.userId;
@@ -267,9 +270,26 @@ export default function ProfileScreen() {
             <View style={s.nameRow}>
               <Text style={s.name} numberOfLines={1}>{user.name}</Text>
               {isMe && (
-                <TouchableOpacity style={s.iconBtn}>
-                  <Text style={s.icon}>⚙️</Text>
-                </TouchableOpacity>
+                <View style={s.nameActions}>
+                  {/* Bell icon — navigate to notifications */}
+                  <TouchableOpacity
+                    style={s.iconBtn}
+                    // @ts-ignore
+                    onPress={() => navigation.navigate('Notifications')}
+                  >
+                    <MaterialCommunityIcons name="bell-outline" size={22} color="#111" />
+                    {unreadCount > 0 && (
+                      <View style={s.bellBadge}>
+                        <Text style={s.bellBadgeText}>
+                          {unreadCount > 9 ? '9+' : String(unreadCount)}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.iconBtn}>
+                    <Text style={s.icon}>⚙️</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
@@ -430,8 +450,22 @@ const s = StyleSheet.create({
   info: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   name: { fontSize: 22, fontWeight: "800", flex: 1 },
-  iconBtn: { padding: 6 },
+  nameActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  iconBtn: { padding: 6, position: "relative" },
   icon: { fontSize: 18 },
+  bellBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#E53935",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: { color: "#fff", fontSize: 9, fontWeight: "900" },
   line: { marginTop: 4, color: "#222", fontSize: 14 },
   editSmall: { marginTop: 10, alignSelf: "flex-start", backgroundColor: "black", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12 },
   editSmallText: { color: "white", fontWeight: "700", fontSize: 12 },

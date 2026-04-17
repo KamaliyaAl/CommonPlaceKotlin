@@ -1,5 +1,23 @@
 export type Category = "food" | "sport" | "nature" | "culture" | "other";
 
+export type AppNotification = {
+  id: string;
+  userId: string;
+  eventId: string;
+  eventTitle: string;
+  text: string;
+  sentAt: string; // ISO 8601 UTC — display in Cyprus time
+  read: boolean;
+  type: '24h' | '1h';
+};
+
+export type EventRegistration = {
+  id: string;
+  userId: string;
+  eventId: string;
+  joinedAt: string;
+};
+
 export type Review = {
   id: string;
   eventId: string;
