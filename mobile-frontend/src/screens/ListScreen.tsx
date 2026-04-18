@@ -39,7 +39,7 @@ export default function ListScreen() {
           </TouchableOpacity>
             <View style={s.spacer} />
             <ActionButton
-              title="My Events"
+              title="Creator Menu"
               onPress={() => navigation.navigate("OrganizerMenu")}
             />
           </View>

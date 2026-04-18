@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useAuth } from "../auth/AuthContext";
 import { locationStore } from "../store/locationStore";
 import { api } from "../api";
 import type { PlaceCategory } from "../types";
@@ -151,7 +152,8 @@ const PLACE_CATEGORIES: { value: PlaceCategory; label: string; icon: string }[] 
 export default function CreatePlaceScreen() {
     const navigation = useNavigation<any>();
     const isFocused = useIsFocused();
-
+    const { user } = useAuth();
+    
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<PlaceCategory>("other");
@@ -241,7 +243,7 @@ export default function CreatePlaceScreen() {
                 latitude: coord.lat,
                 longitude: coord.lng,
                 imageUri,
-                organizerId: undefined,
+                organizerId: user?.uid || null,
             });
 
             Alert.alert("Created", "Place has been added successfully");

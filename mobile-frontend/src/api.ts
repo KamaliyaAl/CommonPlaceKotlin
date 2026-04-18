@@ -296,8 +296,12 @@ export const api = {
   },
 
   // Place Entries
-  async getPlaceEntries() {
-    const response = await fetch(`${API_URL}/place-entries`);
+  async getPlaceEntries(filters?: { organizerId?: string }) {
+    let url = `${API_URL}/place-entries`;
+    if (filters?.organizerId) {
+      url += `?organizerId=${filters.organizerId}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch place entries');
     return await response.json();
   },
@@ -310,6 +314,24 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to create place entry');
     return await response.json();
+  },
+
+  async updatePlaceEntry(id: string, place: Partial<import('./types').PlaceEntry>) {
+    const response = await fetch(`${API_URL}/place-entries/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(place)
+    });
+    if (!response.ok) throw new Error('Failed to update place entry');
+    return await response.json();
+  },
+
+  async deletePlaceEntry(id: string) {
+    const response = await fetch(`${API_URL}/place-entries/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete place entry');
+    return true;
   },
 
   async getReviews(eventId: string, sortBy: 'rating' | 'date' = 'date'): Promise<import('./types').Review[]> {

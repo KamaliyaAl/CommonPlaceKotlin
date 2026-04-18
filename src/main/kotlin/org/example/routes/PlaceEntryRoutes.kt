@@ -29,9 +29,13 @@ fun Route.placeEntryRoutes() {
 
     route("/api/place-entries") {
         get {
+            val organizerId = call.request.queryParameters["organizerId"]
             val places = withLogging("GET place-entries") {
-                FirebaseService.firestore.collection(collection).get().get()
-                    .documents.map { docToPlaceEntry(it) }
+                var query: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
+                if (!organizerId.isNullOrBlank()) {
+                    query = query.whereEqualTo("organizerId", organizerId)
+                }
+                query.get().get().documents.map { docToPlaceEntry(it as QueryDocumentSnapshot) }
             }
             call.respond(places)
         }
