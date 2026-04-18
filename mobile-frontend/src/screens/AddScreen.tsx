@@ -9,13 +9,13 @@ import {
     ScrollView,
     Image,
     Alert,
-    FlatList,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { useEffect } from "react";
 import { useIsFocused, useNavigation, useRoute } from "@react-navigation/native";
+import { Calendar } from "react-native-calendars";
 import { useEvents } from "../context/EventsContext";
 import { locationStore } from "../store/locationStore";
 import { Category } from "../types";
@@ -37,23 +37,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
     other: "Other",
 };
 
-const getDaysArray = () => {
-    const days: string[] = [];
-    const today = new Date();
-    today.setHours(12, 0, 0, 0); // avoid DST shifts
-    for (let i = 0; i < 14; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        days.push(`${yyyy}-${mm}-${dd}`);
-    }
-    return Array.from(new Set(days)); // ensure unique
-};
-
 export default function AddScreen() {
-    const days = useMemo(() => getDaysArray(), []);
     const navigation = useNavigation<NativeStackNavigationProp<BottomTabParamList>>();
     const isFocused = useIsFocused();
     const { addEvent } = useEvents();
@@ -61,14 +45,23 @@ export default function AddScreen() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<Category>("other");
-    const [startDate, setStartDate] = useState<string>(days[0]);
-    const [endDate, setEndDate] = useState<string>(days[0]);
+    const [imageUri, setImageUri] = useState<string | null>(null);
+    const route = useRoute<any>();
+
+    const todayStr = useMemo(() => {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }, []);
+
+    const [startDate, setStartDate] = useState<string>(todayStr);
+    const [endDate, setEndDate] = useState<string>(todayStr);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [price, setPrice] = useState("");
     const [coord, setCoord] = useState<{ lat: number; lng: number } | null>(null);
-    const [imageUri, setImageUri] = useState<string | null>(null);
-    const route = useRoute<any>();
 
     useEffect(() => {
         if (isFocused && locationStore.selected) {
@@ -144,11 +137,11 @@ export default function AddScreen() {
         }
 
         const startTimestamp = startTime.trim()
-            ? `${startDate}T${startTime.trim()}:00`
-            : `${startDate}T00:00:00`;
+            ? `${startDate}T${startTime.trim()}:00Z`
+            : `${startDate}T00:00:00Z`;
         const endTimestamp = endTime.trim()
-            ? `${endDate}T${endTime.trim()}:00`
-            : `${endDate}T23:59:59`;
+            ? `${endDate}T${endTime.trim()}:00Z`
+            : `${endDate}T23:59:59Z`;
 
         try {
             const created = await addEvent({
@@ -174,8 +167,8 @@ export default function AddScreen() {
             setName("");
             setDescription("");
             setCategory("other");
-            setStartDate(days[0]);
-            setEndDate(days[0]);
+            setStartDate(todayStr);
+            setEndDate(todayStr);
             setStartTime("");
             setEndTime("");
             setCoord(null);
@@ -184,20 +177,6 @@ export default function AddScreen() {
             console.error(e);
             Alert.alert("Error", "Failed to create event");
         }
-    };
-
-    const renderCalendarDay = (item: string, current: string, onSelect: (val: string) => void) => {
-        const d = new Date(item);
-        const dayNum = d.getDate();
-        const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
-        const isActive = item === current;
-
-        return (
-            <Pressable key={item} onPress={() => onSelect(item)} style={[styles.dayItem, isActive && styles.dayItemActive]}>
-                <Text style={[styles.dayWeekday, isActive && styles.dayTextActive]}>{weekday}</Text>
-                <Text style={[styles.dayNumber, isActive && styles.dayTextActive]}>{dayNum}</Text>
-            </Pressable>
-        );
     };
 
     return (
@@ -275,13 +254,24 @@ export default function AddScreen() {
                     {/* Date calendars */}
                     <View style={{ marginBottom: 16 }}>
                         <Text style={styles.sectionTitle}>Start Date & Time</Text>
-                        <FlatList
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            data={days}
-                            keyExtractor={(item) => item}
-                            renderItem={({ item }) => renderCalendarDay(item, startDate, setStartDate)}
-                            contentContainerStyle={styles.calendarList}
+                        <Calendar
+                            minDate={todayStr}
+                            current={startDate}
+                            onDayPress={(day) => {
+                                setStartDate(day.dateString);
+                                setEndDate(day.dateString);
+                            }}
+                            markedDates={{
+                                [startDate]: { selected: true, selectedColor: '#8AAFB1' }
+                            }}
+                            theme={{
+                                todayTextColor: '#8AAFB1',
+                                arrowColor: '#8AAFB1',
+                                textDayFontWeight: '500',
+                                textMonthFontWeight: 'bold',
+                                textDayHeaderFontWeight: '500',
+                            }}
+                            style={styles.calendar}
                         />
                         <View style={[styles.inputWrapper, { marginTop: 10 }]}>
                             <TextInput
@@ -295,13 +285,21 @@ export default function AddScreen() {
 
                     <View style={{ marginBottom: 16 }}>
                         <Text style={styles.sectionTitle}>End Date & Time</Text>
-                        <FlatList
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            data={days}
-                            keyExtractor={(item) => item}
-                            renderItem={({ item }) => renderCalendarDay(item, endDate, setEndDate)}
-                            contentContainerStyle={styles.calendarList}
+                        <Calendar
+                            minDate={startDate}
+                            current={endDate}
+                            onDayPress={(day) => setEndDate(day.dateString)}
+                            markedDates={{
+                                [endDate]: { selected: true, selectedColor: '#8AAFB1' }
+                            }}
+                            theme={{
+                                todayTextColor: '#8AAFB1',
+                                arrowColor: '#8AAFB1',
+                                textDayFontWeight: '500',
+                                textMonthFontWeight: 'bold',
+                                textDayHeaderFontWeight: '500',
+                            }}
+                            style={styles.calendar}
                         />
                         <View style={[styles.inputWrapper, { marginTop: 10 }]}>
                             <TextInput
@@ -476,37 +474,14 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontWeight: "700",
     },
-    // Calendar styles
-    calendarList: {
-        paddingHorizontal: 6,
+    dayTextActive: {
+        color: "#fff",
     },
-    dayItem: {
-        width: 64,
-        height: 72,
-        marginRight: 8,
+    calendar: {
         borderRadius: 16,
         borderWidth: 1,
         borderColor: "#BFCFD1",
-        backgroundColor: "#FFFFFF",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    dayItemActive: {
-        backgroundColor: "#8AAFB1",
-        borderColor: "#8AAFB1",
-    },
-    dayWeekday: {
-        fontSize: 12,
-        color: "#6A6A6A",
-    },
-    dayNumber: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#333",
-        marginTop: 2,
-    },
-    dayTextActive: {
-        color: "#fff",
+        overflow: 'hidden'
     },
     mapPicker: {
         width: "100%",
