@@ -81,6 +81,7 @@ fun Application.configureRouting() {
         reviewRoutes()
         registrationRoutes()
         notificationRoutes()
+        uploadRoutes()
 
         // Serve static files from the frontend/dist directory if it exists
         val distDir = File("frontend/dist")

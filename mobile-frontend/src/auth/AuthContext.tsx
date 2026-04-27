@@ -71,7 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: profile.email,
       age: profile.age,
       gender: profile.gender,
-      password: profile.password
+      password: profile.password,
+      photoURL: profile.photoURL ?? undefined
     } as any);
   };
 
@@ -94,7 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: profile.email,
       age: profile.age,
       gender: profile.gender,
-      password: profile.password
+      password: profile.password,
+      photoURL: profile.photoURL ?? undefined
     } as any);
   };
 
@@ -113,11 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: user.uid,
-        name: patch.name || user.name,
-        email: user.email,
+        name: patch.name ?? user.name ?? "",
+        email: user.email ?? "",
         age: patch.age !== undefined ? patch.age : user.age,
-        gender: patch.gender !== undefined ? patch.gender : user.gender,
-        password: (user as any).password || "" // Backend might require this
+        gender: patch.gender !== undefined ? patch.gender : (user.gender ?? false),
+        password: (user as any).password || "",
+        photoURL: patch.photoURL !== undefined ? patch.photoURL : (user.photoURL ?? null)
       })
     });
 

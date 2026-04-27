@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
 import { useIsFocused, useRoute, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth, User } from "../auth/AuthContext";
 import AuthModal from "./AuthModal"; // если файл рядом в src/screens
 import EditInterestsModal from "./EditInterestsModal";
@@ -168,6 +169,46 @@ export default function ProfileScreen() {
     }
   };
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const pickProfilePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      if (!asset.base64) {
+        Alert.alert("Error", "Could not read image data.");
+        return;
+      }
+
+      setUploadingPhoto(true);
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080/api";
+      const res = await fetch(`${apiUrl}/upload/image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: asset.base64 }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Upload failed");
+      }
+      const data = await res.json();
+      await updateProfile({ photoURL: data.url });
+    } catch (e: any) {
+      console.error("Photo upload error:", e);
+      Alert.alert("Error", e?.message || String(e));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const fetchTargetUser = async (id: string) => {
     setFetchingUser(true);
     try {
@@ -179,7 +220,8 @@ export default function ProfileScreen() {
         email: data.email,
         age: data.age,
         gender: data.gender,
-        interests: [], // Backend might not return interests yet in this call
+        photoURL: data.photoURL ?? undefined,
+        interests: [],
         friendsCount: 0
       });
     } catch (err) {
@@ -261,10 +303,27 @@ export default function ProfileScreen() {
               <Text style={s.backBtnText}>←</Text>
             </TouchableOpacity>
           )}
-          <View style={s.avatarWrap}>
-            <View style={s.avatar} />
-            <View style={s.badge} />
-          </View>
+          <TouchableOpacity
+            style={s.avatarWrap}
+            onPress={isMe ? pickProfilePhoto : undefined}
+            disabled={!isMe || uploadingPhoto}
+            activeOpacity={isMe ? 0.7 : 1}
+          >
+            {user.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={s.avatar} />
+            ) : (
+              <View style={s.avatar} />
+            )}
+            {isMe && (
+              <View style={s.cameraOverlay}>
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <MaterialCommunityIcons name="camera" size={18} color="#fff" />
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
 
           <View style={s.info}>
             <View style={s.nameRow}>
@@ -293,7 +352,7 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            <Text style={s.line}>Email: {user.email}</Text>
+            {isMe && <Text style={s.line}>Email: {user.email}</Text>}
             <Text style={s.line}>Age: {user.age ?? "-"}</Text>
             <Text style={s.line}>Gender: {user.gender === true ? "Female" : user.gender === false ? "Male" : "-"}</Text>
 
@@ -447,6 +506,7 @@ const s = StyleSheet.create({
   avatarWrap: { width: 120, height: 120 },
   avatar: { width: 120, height: 120, borderRadius: 60, backgroundColor: "#ddd" },
   badge: { position: "absolute", right: 10, top: 10, width: 18, height: 18, borderRadius: 9, backgroundColor: "black" },
+  cameraOverlay: { position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
   info: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   name: { fontSize: 22, fontWeight: "800", flex: 1 },

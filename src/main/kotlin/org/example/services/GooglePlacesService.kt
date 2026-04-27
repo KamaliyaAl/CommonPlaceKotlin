@@ -88,7 +88,7 @@ object GooglePlacesService {
     // Cyprus geographic center used as location bias
     private const val CYPRUS_LAT = 35.1264
     private const val CYPRUS_LON = 33.4299
-    private const val SEARCH_RADIUS_M = 100_000.0
+    private const val SEARCH_RADIUS_M = 50_000.0
 
     private val EVENT_QUERIES = listOf(
         "music concerts Cyprus",

@@ -38,7 +38,8 @@ fun Route.profileRoutes() {
                         gender = existingProfile.getBoolean("gender") ?: false,
                         email = existingProfile.getString("email") ?: "",
                         password = existingPassword,
-                        isAdmin = existingProfile.getBoolean("isAdmin") ?: false
+                        isAdmin = existingProfile.getBoolean("isAdmin") ?: false,
+                        photoURL = existingProfile.getString("photoURL")
                     )
                     call.respond(HttpStatusCode.OK, profile)
                 } else {
@@ -61,7 +62,8 @@ fun Route.profileRoutes() {
                         gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
-                        isAdmin = doc.getBoolean("isAdmin") ?: false
+                        isAdmin = doc.getBoolean("isAdmin") ?: false,
+                        photoURL = doc.getString("photoURL")
                     )
                 }
             }
@@ -86,7 +88,8 @@ fun Route.profileRoutes() {
                         gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
-                        isAdmin = doc.getBoolean("isAdmin") ?: false
+                        isAdmin = doc.getBoolean("isAdmin") ?: false,
+                        photoURL = doc.getString("photoURL")
                     )
                 }
             }
@@ -115,7 +118,8 @@ fun Route.profileRoutes() {
                         gender = doc.getBoolean("gender") ?: false,
                         email = doc.getString("email") ?: "",
                         password = doc.getString("password") ?: "",
-                        isAdmin = doc.getBoolean("isAdmin") ?: false
+                        isAdmin = doc.getBoolean("isAdmin") ?: false,
+                        photoURL = doc.getString("photoURL")
                     )
                 }
             }
@@ -136,7 +140,8 @@ fun Route.profileRoutes() {
                 "gender" to profile.gender,
                 "email" to profile.email,
                 "password" to profile.password,
-                "isAdmin" to profile.isAdmin
+                "isAdmin" to profile.isAdmin,
+                "photoURL" to profile.photoURL
             )
             withLogging("POST profile") {
                 docRef.set(data).get()
@@ -161,6 +166,9 @@ fun Route.profileRoutes() {
                 profile.password
             }
             
+            val existingPhotoURL = existingProfileDoc.getString("photoURL")
+            val finalPhotoURL = if (!profile.photoURL.isNullOrBlank()) profile.photoURL else existingPhotoURL
+
             val data: Map<String, Any?> = mapOf(
                 "id" to id,
                 "name" to profile.name,
@@ -168,13 +176,14 @@ fun Route.profileRoutes() {
                 "gender" to profile.gender,
                 "email" to profile.email,
                 "password" to finalPassword,
-                "isAdmin" to profile.isAdmin
+                "isAdmin" to profile.isAdmin,
+                "photoURL" to finalPhotoURL
             )
             withLogging("PUT profile $id") {
                 FirebaseService.firestore.collection(collection)
                     .document(id).set(data).get()
             }
-            call.respond(HttpStatusCode.OK, profile.copy(id = id))
+            call.respond(HttpStatusCode.OK, profile.copy(id = id, photoURL = finalPhotoURL))
         }
 
         delete("/{id}") {

@@ -63,6 +63,20 @@ const PLACE_CATEGORY_LABEL: Record<PlaceCategory, string> = {
     other: "Other",
 };
 
+const PLACE_CATEGORIES: { label: string; value: string }[] = [
+    { label: "All", value: "all" },
+    { label: "Restaurant", value: "restaurant" },
+    { label: "Cafe", value: "cafe" },
+    { label: "Bar", value: "bar" },
+    { label: "Gym", value: "gym" },
+    { label: "Park", value: "park" },
+    { label: "Museum", value: "museum" },
+    { label: "Gallery", value: "gallery" },
+    { label: "Hotel", value: "hotel" },
+    { label: "Shop", value: "shop" },
+    { label: "Other", value: "other" },
+];
+
 const PLACE_TO_GENERAL_CATEGORY: Record<string, string> = {
     restaurant: "food",
     cafe: "food",
@@ -134,12 +148,16 @@ export default function MapScreen() {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
     // Filter states
+    const [activeContentType, setActiveContentType] = useState<"all" | "events" | "places">("all");
     const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+    const [activePlaceCategories, setActivePlaceCategories] = useState<string[]>(["all"]);
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
 
     // Internal modal states
+    const [pendingContentType, setPendingContentType] = useState<"all" | "events" | "places">("all");
     const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
+    const [pendingPlaceCategories, setPendingPlaceCategories] = useState<string[]>(["all"]);
     const [pendingMinPrice, setPendingMinPrice] = useState("");
     const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
@@ -209,8 +227,8 @@ export default function MapScreen() {
     }, [query, activeCategories, selectedDate, minPrice, maxPrice]);
 
     const filteredPlaces = useMemo(() => {
+        if (activeContentType === "events") return [];
         const q = query.trim().toLowerCase();
-        const cats = activeCategories;
 
         return placeEntries.filter((p) => {
             const matchesQuery = !q || (
@@ -220,11 +238,18 @@ export default function MapScreen() {
             );
             if (!matchesQuery) return false;
 
-            if (cats.includes("all")) return true;
-            const mappedCat = PLACE_TO_GENERAL_CATEGORY[p.category || "other"] || "other";
-            return cats.includes(mappedCat);
+            if (!activePlaceCategories.includes("all")) {
+                if (!activePlaceCategories.includes(p.category || "other")) return false;
+            }
+
+            if (!activeCategories.includes("all")) {
+                const mappedCat = PLACE_TO_GENERAL_CATEGORY[p.category || "other"] || "other";
+                if (!activeCategories.includes(mappedCat)) return false;
+            }
+
+            return true;
         });
-    }, [placeEntries, query, activeCategories]);
+    }, [placeEntries, query, activeCategories, activePlaceCategories, activeContentType]);
 
     const selectedEvent = useMemo(
         () => selected?.kind === "event" ? filteredEvents.find((e) => e.id === selected.id) ?? null : null,
@@ -236,10 +261,7 @@ export default function MapScreen() {
     );
 
     const handleCategoryPress = (val: string) => {
-        if (val === "all") {
-            setPendingCategories(["all"]);
-            return;
-        }
+        if (val === "all") { setPendingCategories(["all"]); return; }
         let newCats = pendingCategories.includes("all") ? [] : [...pendingCategories];
         if (newCats.includes(val)) {
             newCats = newCats.filter(c => c !== val);
@@ -250,29 +272,55 @@ export default function MapScreen() {
         setPendingCategories(newCats);
     };
 
+    const handlePlaceCategoryPress = (val: string) => {
+        if (val === "all") { setPendingPlaceCategories(["all"]); return; }
+        let newCats = pendingPlaceCategories.includes("all") ? [] : [...pendingPlaceCategories];
+        if (newCats.includes(val)) {
+            newCats = newCats.filter(c => c !== val);
+            if (newCats.length === 0) newCats = ["all"];
+        } else {
+            newCats.push(val);
+        }
+        setPendingPlaceCategories(newCats);
+    };
+
     const applyFilters = () => {
+        setActiveContentType(pendingContentType);
         setActiveCategories(pendingCategories);
+        setActivePlaceCategories(pendingPlaceCategories);
         setMinPrice(pendingMinPrice);
         setMaxPrice(pendingMaxPrice);
         setIsFiltersOpen(false);
     };
 
     const resetFilters = () => {
+        setPendingContentType("all");
         setPendingCategories(["all"]);
+        setPendingPlaceCategories(["all"]);
         setPendingMinPrice("");
         setPendingMaxPrice("");
+        setActiveContentType("all");
         setActiveCategories(["all"]);
+        setActivePlaceCategories(["all"]);
         setMinPrice("");
         setMaxPrice("");
         setIsFiltersOpen(false);
     };
 
     const openModal = () => {
+        setPendingContentType(activeContentType);
         setPendingCategories(activeCategories);
+        setPendingPlaceCategories(activePlaceCategories);
         setPendingMinPrice(minPrice);
         setPendingMaxPrice(maxPrice);
         setIsFiltersOpen(true);
     };
+
+    const filterBadgeCount =
+        activeCategories.filter(c => c !== "all").length +
+        activePlaceCategories.filter(c => c !== "all").length +
+        (activeContentType !== "all" ? 1 : 0) +
+        (minPrice !== "" ? 1 : 0);
 
     const renderCalendarDay = useCallback(({ item }: { item: string }) => {
         const d = new Date(item);
@@ -302,7 +350,7 @@ export default function MapScreen() {
                     showsMyLocationButton
                 >
                     {/* Event markers — dark */}
-                    {filteredEvents.map((p) => (
+                    {activeContentType !== "places" && filteredEvents.map((p) => (
                         <Marker
                             key={`event-${p.id}`}
                             coordinate={{ latitude: p.lat, longitude: p.lng }}
@@ -355,16 +403,28 @@ export default function MapScreen() {
                     />
                 </View>
 
-                {/* Filters button */}
-                <Pressable
-                    style={styles.filtersBar}
-                    onPress={openModal}
-                >
-                    <MaterialCommunityIcons name="tune" size={20} color="#111" />
-                    <Text style={styles.filtersText}>
-                        Filters {activeCategories.filter(c => c !== 'all').length > 0 ? `(${activeCategories.filter(c => c !== 'all').length})` : ""}
-                    </Text>
-                </Pressable>
+                {/* Top controls row: filters button + content-type toggle */}
+                <View style={styles.topControlsRow}>
+                    <Pressable style={styles.filtersBar} onPress={openModal}>
+                        <MaterialCommunityIcons name="tune" size={20} color="#111" />
+                        <Text style={styles.filtersText}>
+                            Filters{filterBadgeCount > 0 ? ` (${filterBadgeCount})` : ""}
+                        </Text>
+                    </Pressable>
+                    <View style={styles.typeToggleRow}>
+                        {(["all", "events", "places"] as const).map((t) => (
+                            <Pressable
+                                key={t}
+                                style={[styles.typeChip, activeContentType === t && styles.typeChipActive]}
+                                onPress={() => setActiveContentType(t)}
+                            >
+                                <Text style={[styles.typeChipText, activeContentType === t && styles.typeChipTextActive]}>
+                                    {t === "all" ? "All" : t === "events" ? "Events" : "Places"}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                </View>
 
                 {/* Search */}
                 <View style={styles.searchWrap}>
@@ -497,70 +557,116 @@ export default function MapScreen() {
                             </View>
 
                             <ScrollView showsVerticalScrollIndicator={false}>
-                                <Text style={styles.filterLabel}>Categories</Text>
+
+                                {/* Content type */}
+                                <Text style={styles.filterLabel}>Show</Text>
                                 <View style={styles.chipsWrap}>
-                                    {CATEGORIES.map(c => (
-                                        <TouchableOpacity 
-                                            key={c.value} 
-                                            onPress={() => handleCategoryPress(c.value)}
-                                            style={[styles.chip, pendingCategories.includes(c.value) && styles.chipActive]}
+                                    {(["all", "events", "places"] as const).map((t) => (
+                                        <TouchableOpacity
+                                            key={t}
+                                            onPress={() => setPendingContentType(t)}
+                                            style={[styles.chip, pendingContentType === t && styles.chipActive]}
                                         >
-                                            <Text style={[styles.chipText, pendingCategories.includes(c.value) && styles.chipTextActive]}>
-                                                {c.label}
+                                            <Text style={[styles.chipText, pendingContentType === t && styles.chipTextActive]}>
+                                                {t === "all" ? "All" : t === "events" ? "Events" : "Places"}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
 
-                                <Text style={[styles.filterLabel, { marginTop: 24 }]}>
-                                    Price Range: €{pendingMinPrice === "" ? 0 : pendingMinPrice} - €{pendingMaxPrice === "" ? 50 : pendingMaxPrice}
-                                </Text>
-                                
-                                <View style={styles.sliderWrap}>
-                                    <MultiSlider
-                                        values={[
-                                            pendingMinPrice === "" ? 0 : parseFloat(pendingMinPrice),
-                                            pendingMaxPrice === "" ? 50 : parseFloat(pendingMaxPrice),
-                                        ]}
-                                        min={0}
-                                        max={50}
-                                        step={2}
-                                        sliderLength={300}
-                                        allowOverlap={true}
-                                        snapped
-                                        enableLabel
-                                        onValuesChange={(vals) => {
-                                            const [min, max] = vals;
-                                            setPendingMinPrice(String(min));
-                                            setPendingMaxPrice(String(max));
-                                        }}
-                                        selectedStyle={styles.sliderSelected}
-                                        unselectedStyle={styles.sliderUnselected}
-                                        trackStyle={styles.sliderTrack}
-                                        containerStyle={styles.sliderContainer}
-                                        customMarker={() => <View style={styles.sliderThumb} />}
-                                        customLabel={(e) => {
-                                            const marker1 = e.oneMarkerLeftPosition ?? 0;
-                                            const marker2 = e.twoMarkerLeftPosition ?? 300;
-                                            return (
-                                                <View style={styles.labelsOverlay} pointerEvents="none">
-                                                    <View style={[styles.priceBubbleWrap, { left: marker1 }]}>
-                                                        <View style={styles.priceBubble}>
-                                                            <Text style={styles.priceBubbleText}>€{e.oneMarkerValue ?? 0}</Text>
+                                {/* Event categories */}
+                                {pendingContentType !== "places" && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 24 }]}>Event Categories</Text>
+                                        <View style={styles.chipsWrap}>
+                                            {CATEGORIES.map(c => (
+                                                <TouchableOpacity
+                                                    key={c.value}
+                                                    onPress={() => handleCategoryPress(c.value)}
+                                                    style={[styles.chip, pendingCategories.includes(c.value) && styles.chipActive]}
+                                                >
+                                                    <Text style={[styles.chipText, pendingCategories.includes(c.value) && styles.chipTextActive]}>
+                                                        {c.label}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Place categories */}
+                                {pendingContentType !== "events" && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 24 }]}>Place Categories</Text>
+                                        <View style={styles.chipsWrap}>
+                                            {PLACE_CATEGORIES.map(c => (
+                                                <TouchableOpacity
+                                                    key={c.value}
+                                                    onPress={() => handlePlaceCategoryPress(c.value)}
+                                                    style={[styles.chip, pendingPlaceCategories.includes(c.value) && styles.chipActive]}
+                                                >
+                                                    <Text style={[styles.chipText, pendingPlaceCategories.includes(c.value) && styles.chipTextActive]}>
+                                                        {c.label}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Price filter (events only) */}
+                                {pendingContentType !== "places" && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 24 }]}>
+                                            Price Range: €{pendingMinPrice === "" ? 0 : pendingMinPrice} - €{pendingMaxPrice === "" ? 50 : pendingMaxPrice}
+                                        </Text>
+                                        <View style={styles.sliderWrap}>
+                                            <MultiSlider
+                                                values={[
+                                                    pendingMinPrice === "" ? 0 : parseFloat(pendingMinPrice),
+                                                    pendingMaxPrice === "" ? 50 : parseFloat(pendingMaxPrice),
+                                                ]}
+                                                min={0}
+                                                max={50}
+                                                step={2}
+                                                sliderLength={300}
+                                                allowOverlap={true}
+                                                snapped
+                                                enableLabel
+                                                onValuesChange={(vals) => {
+                                                    const [min, max] = vals;
+                                                    setPendingMinPrice(String(min));
+                                                    setPendingMaxPrice(String(max));
+                                                }}
+                                                selectedStyle={styles.sliderSelected}
+                                                unselectedStyle={styles.sliderUnselected}
+                                                trackStyle={styles.sliderTrack}
+                                                containerStyle={styles.sliderContainer}
+                                                customMarker={() => <View style={styles.sliderThumb} />}
+                                                customLabel={(e) => {
+                                                    const marker1 = e.oneMarkerLeftPosition ?? 0;
+                                                    const marker2 = e.twoMarkerLeftPosition ?? 300;
+                                                    return (
+                                                        <View style={styles.labelsOverlay} pointerEvents="none">
+                                                            <View style={[styles.priceBubbleWrap, { left: marker1 }]}>
+                                                                <View style={styles.priceBubble}>
+                                                                    <Text style={styles.priceBubbleText}>€{e.oneMarkerValue ?? 0}</Text>
+                                                                </View>
+                                                                <View style={styles.priceBubbleArrow} />
+                                                            </View>
+                                                            <View style={[styles.priceBubbleWrap, { left: marker2 }]}>
+                                                                <View style={styles.priceBubble}>
+                                                                    <Text style={styles.priceBubbleText}>€{e.twoMarkerValue ?? 50}</Text>
+                                                                </View>
+                                                                <View style={styles.priceBubbleArrow} />
+                                                            </View>
                                                         </View>
-                                                        <View style={styles.priceBubbleArrow} />
-                                                    </View>
-                                                    <View style={[styles.priceBubbleWrap, { left: marker2 }]}>
-                                                        <View style={styles.priceBubble}>
-                                                            <Text style={styles.priceBubbleText}>€{e.twoMarkerValue ?? 50}</Text>
-                                                        </View>
-                                                        <View style={styles.priceBubbleArrow} />
-                                                    </View>
-                                                </View>
-                                            );
-                                        }}
-                                    />
-                                </View>
+                                                    );
+                                                }}
+                                            />
+                                        </View>
+                                    </>
+                                )}
 
                                 <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
                                     <Text style={styles.applyText}>Apply Filters</Text>
@@ -632,11 +738,18 @@ const styles = StyleSheet.create({
     dayNumber: { fontSize: 18, fontWeight: "800", color: "#111" },
     dayTextActive: { color: "#fff" },
 
-    // Filters Bar
-    filtersBar: {
+    // Top controls row
+    topControlsRow: {
         position: "absolute",
         top: Platform.OS === "ios" ? 100 : 90,
         left: 18,
+        right: 18,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        zIndex: 5,
+    },
+    filtersBar: {
         height: 44,
         paddingHorizontal: 12,
         borderRadius: 22,
@@ -650,9 +763,30 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        zIndex: 5,
     },
     filtersText: { fontSize: 14, fontWeight: "700" },
+    typeToggleRow: {
+        flexDirection: "row",
+        gap: 6,
+        flex: 1,
+    },
+    typeChip: {
+        flex: 1,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#e6e6e6",
+        alignItems: "center",
+        justifyContent: "center",
+        elevation: 3,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+    },
+    typeChipActive: { backgroundColor: "#111", borderColor: "#111" },
+    typeChipText: { fontSize: 12, fontWeight: "700", color: "#555" },
+    typeChipTextActive: { color: "#fff" },
 
     // Modal
     modalOverlay: {

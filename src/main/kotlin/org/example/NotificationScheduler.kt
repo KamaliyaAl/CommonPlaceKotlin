@@ -1,5 +1,6 @@
 package org.example
 
+import com.google.cloud.Timestamp
 import kotlinx.coroutines.*
 import org.example.firebase.FirebaseService
 import org.slf4j.LoggerFactory
@@ -70,7 +71,11 @@ object NotificationScheduler {
                 .collection(eventsCollection).document(eventId).get().get()
             if (!eventDoc.exists()) continue
 
-            val startTimeStr = eventDoc.getString("startTime") ?: continue
+            val startTimeStr = when (val v = eventDoc.get("startTime")) {
+                is Timestamp -> Instant.ofEpochSecond(v.seconds, v.nanos.toLong()).toString()
+                is String -> v
+                else -> null
+            } ?: continue
             val eventTitle = eventDoc.getString("name") ?: "Event"
 
             val startTime = parseStartTime(startTimeStr) ?: run {

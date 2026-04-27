@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew compileKotlin --stacktrace)"
+      "Bash(./gradlew compileKotlin --stacktrace)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
