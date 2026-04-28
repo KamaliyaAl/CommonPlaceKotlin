@@ -71,10 +71,14 @@ export default function HistoryScreen() {
     }
   };
 
-  const isUpcoming = (event: Place) => {
-    const d = new Date(event.startTime ?? event.date).getTime();
-    return d >= Date.now();
-  };
+  const getEventStatus = (event: Place) => {
+  const now = Date.now();
+  const start = new Date(event.startTime ?? event.date).getTime();
+  const end = new Date(event.endTime ?? event.date).getTime();
+  if (now < start) return "Upcoming";
+  if (now > end) return "Past";
+  return "Current";
+};
 
   return (
     <SafeAreaView style={s.safe}>
@@ -100,10 +104,10 @@ export default function HistoryScreen() {
             )
           }
           renderItem={({ item }) => {
-            const upcoming = isUpcoming(item);
+            const status = getEventStatus(item);
             return (
               <TouchableOpacity
-                style={[s.card, !upcoming && s.cardPast]}
+                style={[s.card, status === "Past" && s.cardPast]}
                 onPress={() => navigation.navigate("EventDetails", { eventId: item.id })}
                 activeOpacity={0.8}
               >
@@ -118,9 +122,15 @@ export default function HistoryScreen() {
                 <View style={s.cardBody}>
                   <View style={s.cardTop}>
                     <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={[s.badge, upcoming ? s.badgeUpcoming : s.badgePast]}>
-                      <Text style={s.badgeText}>{upcoming ? "Upcoming" : "Past"}</Text>
-                    </View>
+                    {(() => {
+                      const status = getEventStatus(item);
+                      const badgeStyle = status === "Upcoming" ? s.badgeUpcoming : status === "Current" ? s.badgeCurrent : s.badgePast;
+                      return (
+                        <View style={[s.badge, badgeStyle]}>
+                          <Text style={s.badgeText}>{status}</Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                   <Text style={s.cardDesc} numberOfLines={2}>{item.description}</Text>
                   <View style={s.cardMeta}>
@@ -203,7 +213,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
   badgeUpcoming: { backgroundColor: "#DFF2F1" },
-  badgePast: { backgroundColor: "#EFEFEF" },
+  badgeCurrent: { backgroundColor: "#FFF3CD" },
   badgeText: { fontSize: 11, fontWeight: "700", color: "#3B7D7A" },
   backBtn: {
     position: "absolute",

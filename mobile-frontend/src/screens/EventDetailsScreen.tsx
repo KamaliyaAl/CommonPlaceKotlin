@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEvents } from "../context/EventsContext";
 import { useAuth } from "../auth/AuthContext";
-import { Category } from "../types";
+import { Category, Place } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
 import { api } from "../api";
 
@@ -34,6 +34,15 @@ const formatTime = (isoString?: string | null) => {
   const timePart = isoString.split("T")[1];
   if (!timePart) return "?";
   return timePart.slice(0, 5); // HH:mm
+};
+
+const getEventStatus = (event: Place) => {
+  const now = Date.now();
+  const start = new Date(event.startTime ?? event.date).getTime();
+  const end = new Date(event.endTime ?? event.date).getTime();
+  if (now < start) return "Upcoming";
+  if (now > end) return "Past";
+  return "Current";
 };
 
 export default function EventDetailsScreen() {
@@ -193,6 +202,17 @@ export default function EventDetailsScreen() {
         <View style={s.body}>
           <View style={s.titleRow}>
             <Text style={s.title}>{event.title}</Text>
+            {(() => {
+              const status = getEventStatus(event);
+              let style = s.badgeUpcoming;
+              if (status === "Past") style = s.badgePast;
+              else if (status === "Current") style = s.badgeCurrent;
+              return (
+                <View style={[s.badge, style]}>
+                  <Text style={s.badgeText}>{status}</Text>
+                </View>
+              );
+            })()}
           </View>
 
           <View style={s.metaRow}>
@@ -236,13 +256,20 @@ export default function EventDetailsScreen() {
           </View>
 
           <View style={s.btnRow}>
-            <TouchableOpacity style={[s.btn, s.joinBtn, joined && s.joinBtnActive]} onPress={onJoin} disabled={joiningLoading}>
-              {joiningLoading
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <MaterialCommunityIcons name={joined ? "account-remove-outline" : "account-plus-outline"} size={20} color="#fff" />
+            {(() => {
+              const status = getEventStatus(event);
+              if (status !== "Past") {
+                return (
+                  <TouchableOpacity style={[s.btn, s.joinBtn, joined && s.joinBtnActive]} onPress={onJoin} disabled={joiningLoading}>
+                    {joiningLoading
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <MaterialCommunityIcons name={joined ? "account-remove-outline" : "account-plus-outline"} size={20} color="#fff" />}
+                    <Text style={s.btnText}>{joined ? "Unjoin" : "Join"}</Text>
+                  </TouchableOpacity>
+                );
               }
-              <Text style={s.btnText}>{joined ? "Unjoin" : "Join"}</Text>
-            </TouchableOpacity>
+              return null;
+            })()}
             <TouchableOpacity style={[s.btn, s.mapBtn]} onPress={onShowOnMap}>
               <MaterialCommunityIcons name="map-marker-outline" size={20} color="#111" />
               <Text style={[s.btnText, { color: "#111" }]}>Show on map</Text>
@@ -338,4 +365,12 @@ const s = StyleSheet.create({
   organizerAvatar: { width: 48, height: 48, borderRadius: 24 },
   organizerName: { fontSize: 16, fontWeight: '800', color: '#111' },
   organizerTag: { fontSize: 13, color: '#666', marginTop: 2 },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  badgeUpcoming: { backgroundColor: "#DFF2F1" },
+  badgeCurrent: { backgroundColor: "#FFF3CD" },
+  badgeText: { fontSize: 11, fontWeight: "700", color: "#3B7D7A" },
 });
