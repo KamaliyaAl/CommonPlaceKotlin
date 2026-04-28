@@ -151,6 +151,7 @@ export default function MapScreen() {
     const [activeContentType, setActiveContentType] = useState<"all" | "events" | "places">("all");
     const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
     const [activePlaceCategories, setActivePlaceCategories] = useState<string[]>(["all"]);
+    const [activeStatusFilters, setActiveStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
 
@@ -158,6 +159,7 @@ export default function MapScreen() {
     const [pendingContentType, setPendingContentType] = useState<"all" | "events" | "places">("all");
     const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
     const [pendingPlaceCategories, setPendingPlaceCategories] = useState<string[]>(["all"]);
+    const [pendingStatusFilters, setPendingStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
     const [pendingMinPrice, setPendingMinPrice] = useState("");
     const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
@@ -202,14 +204,21 @@ export default function MapScreen() {
                 categories: activeCategories,
                 date: selectedDate || undefined,
                 minPrice: minPrice || undefined,
-                maxPrice: maxPrice || undefined,
-                minStartTime: !selectedDate ? 'now' : undefined
+                maxPrice: maxPrice || undefined
             });
-            setFilteredEvents(res);
+            const filtered = res.filter(item => {
+                if (activeStatusFilters.includes('All')) return true;
+                const now = new Date().getTime();
+                const start = new Date(item.startTime).getTime();
+                const end = new Date(item.endTime).getTime();
+                const status = now < start ? 'Upcoming' : now > end ? 'Past' : 'Current';
+                return activeStatusFilters.includes(status);
+            });
+            setFilteredEvents(filtered);
         } catch (e) {
             console.error(e);
         }
-    }, [query, activeCategories, selectedDate, minPrice, maxPrice]);
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice, activeStatusFilters]);
 
     const isFocused = useIsFocused();
 
@@ -224,7 +233,7 @@ export default function MapScreen() {
             fetchEvents();
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [query, activeCategories, selectedDate, minPrice, maxPrice]);
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice, activeStatusFilters]);
 
     const filteredPlaces = useMemo(() => {
         if (activeContentType === "events") return [];
@@ -260,6 +269,21 @@ export default function MapScreen() {
         [filteredPlaces, selected]
     );
 
+    const handleStatusPress = (val: string) => {
+        if (val === "All") {
+            setPendingStatusFilters(["All"]);
+            return;
+        }
+        let newFilters = pendingStatusFilters.includes("All") ? [] : [...pendingStatusFilters];
+        if (newFilters.includes(val)) {
+            newFilters = newFilters.filter(s => s !== val);
+            if (newFilters.length === 0) newFilters = ["All"];
+        } else {
+            newFilters.push(val);
+        }
+        setPendingStatusFilters(newFilters);
+    };
+
     const handleCategoryPress = (val: string) => {
         if (val === "all") { setPendingCategories(["all"]); return; }
         let newCats = pendingCategories.includes("all") ? [] : [...pendingCategories];
@@ -287,6 +311,7 @@ export default function MapScreen() {
     const applyFilters = () => {
         setActiveContentType(pendingContentType);
         setActiveCategories(pendingCategories);
+        setActiveStatusFilters(pendingStatusFilters);
         setActivePlaceCategories(pendingPlaceCategories);
         setMinPrice(pendingMinPrice);
         setMaxPrice(pendingMaxPrice);
@@ -296,11 +321,13 @@ export default function MapScreen() {
     const resetFilters = () => {
         setPendingContentType("all");
         setPendingCategories(["all"]);
+        setPendingStatusFilters(["Upcoming", "Current"]);
         setPendingPlaceCategories(["all"]);
         setPendingMinPrice("");
         setPendingMaxPrice("");
         setActiveContentType("all");
         setActiveCategories(["all"]);
+        setActiveStatusFilters(["Upcoming", "Current"]);
         setActivePlaceCategories(["all"]);
         setMinPrice("");
         setMaxPrice("");
@@ -310,6 +337,7 @@ export default function MapScreen() {
     const openModal = () => {
         setPendingContentType(activeContentType);
         setPendingCategories(activeCategories);
+        setPendingStatusFilters(activeStatusFilters);
         setPendingPlaceCategories(activePlaceCategories);
         setPendingMinPrice(minPrice);
         setPendingMaxPrice(maxPrice);
@@ -318,6 +346,7 @@ export default function MapScreen() {
 
     const filterBadgeCount =
         activeCategories.filter(c => c !== "all").length +
+        (JSON.stringify([...activeStatusFilters].sort()) !== JSON.stringify(["Current", "Upcoming"]) ? 1 : 0) +
         activePlaceCategories.filter(c => c !== "all").length +
         (activeContentType !== "all" ? 1 : 0) +
         (minPrice !== "" ? 1 : 0);
@@ -573,6 +602,26 @@ export default function MapScreen() {
                                         </TouchableOpacity>
                                     ))}
                                 </View>
+                                
+                                {/* Status filter (events only) */}
+                                {pendingContentType !== "places" && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 24 }]}>Status</Text>
+                                        <View style={styles.chipsWrap}>
+                                            {[{ label: "All", value: "All" }, { label: "Upcoming", value: "Upcoming" }, { label: "Current", value: "Current" }, { label: "Past", value: "Past" }].map(c => (
+                                                <TouchableOpacity
+                                                    key={c.value}
+                                                    onPress={() => handleStatusPress(c.value)}
+                                                    style={[styles.chip, pendingStatusFilters.includes(c.value) && styles.chipActive]}
+                                                >
+                                                    <Text style={[styles.chipText, pendingStatusFilters.includes(c.value) && styles.chipTextActive]}>
+                                                        {c.label}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
 
                                 {/* Event categories */}
                                 {pendingContentType !== "places" && (

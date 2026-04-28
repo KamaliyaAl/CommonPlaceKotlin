@@ -76,23 +76,39 @@ export default function FindScreen() {
   const [query, setQuery] = useState("");
   const days = useMemo(() => getDaysArray(), []);
   const [activeDate, setActiveDate] = useState<string | null>(null);
-  const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
-  const [minPrice, setMinPrice] = useState("");
+
   const [maxPrice, setMaxPrice] = useState("");
+  const [minPrice, setMinPrice] = useState("");
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
 
   // Internal states for the modal
+  const [activeCategories, setActiveCategories] = useState<string[]>(["all"]);
+  const [activeStatusFilters, setActiveStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
   const [pendingCategories, setPendingCategories] = useState<string[]>(["all"]);
+  const [pendingStatusFilters, setPendingStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
   const [pendingMinPrice, setPendingMinPrice] = useState("");
   const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
+  const handleStatusPress = (val: string) => {
+    if (val === "All") {
+      setPendingStatusFilters(["All"]);
+      return;
+    }
+    let newFilters = pendingStatusFilters.includes("All") ? [] : [...pendingStatusFilters];
+    if (newFilters.includes(val)) {
+      newFilters = newFilters.filter(s => s !== val);
+      if (newFilters.length === 0) newFilters = ["All"];
+    } else {
+      newFilters.push(val);
+    }
+    setPendingStatusFilters(newFilters);
+  };
   const handleCategoryPress = (val: string) => {
     if (val === "all") {
       setPendingCategories(["all"]);
       return;
     }
-    
     let newCats = pendingCategories.includes("all") ? [] : [...pendingCategories];
     if (newCats.includes(val)) {
       newCats = newCats.filter(c => c !== val);
@@ -105,6 +121,7 @@ export default function FindScreen() {
 
   const applyFilters = () => {
     setActiveCategories(pendingCategories);
+    setActiveStatusFilters(pendingStatusFilters);
     setMinPrice(pendingMinPrice);
     setMaxPrice(pendingMaxPrice);
     setIsFilterVisible(false);
@@ -112,10 +129,11 @@ export default function FindScreen() {
 
   const resetFilters = () => {
     setPendingCategories(["all"]);
+    setPendingStatusFilters(["Upcoming", "Current"]);
     setPendingMinPrice("");
     setPendingMaxPrice("");
-    // We can also immediately reset active filters or let the user click 'Apply'
     setActiveCategories(["all"]);
+    setActiveStatusFilters(["Upcoming", "Current"]);
     setMinPrice("");
     setMaxPrice("");
     setIsFilterVisible(false);
@@ -124,6 +142,7 @@ export default function FindScreen() {
   // Sync pending state when modal opens
   const openModal = () => {
     setPendingCategories(activeCategories);
+    setPendingStatusFilters(activeStatusFilters);
     setPendingMinPrice(minPrice);
     setPendingMaxPrice(maxPrice);
     setIsFilterVisible(true);
@@ -139,7 +158,15 @@ export default function FindScreen() {
           minPrice: minPrice || undefined,
           maxPrice: maxPrice || undefined
         });
-        setFilteredEvents(res);
+        const filtered = res.filter(item => {
+          if (activeStatusFilters.includes('All')) return true;
+          const now = new Date().getTime();
+          const start = new Date(item.startTime).getTime();
+          const end = new Date(item.endTime).getTime();
+          const status = now < start ? 'Upcoming' : now > end ? 'Past' : 'Current';
+          return activeStatusFilters.includes(status);
+        });
+        setFilteredEvents(filtered);
       } catch (e) {
         console.error(e);
       }
@@ -148,7 +175,7 @@ export default function FindScreen() {
       fetchFiltered();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [query, activeCategories, activeDate, minPrice, maxPrice]);
+  }, [query, activeCategories, activeDate, minPrice, maxPrice, activeStatusFilters]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -189,7 +216,15 @@ export default function FindScreen() {
         onPress={openModal}
       >
         <MaterialCommunityIcons name="tune" size={20} color="#fff" />
-        <Text style={s.filtersToggleText}>Filters {activeCategories.filter(c => c !== 'all').length > 0 ? `(${activeCategories.filter(c => c !== 'all').length})` : ""}</Text>
+        <Text style={s.filtersToggleText}>
+          Filters {(() => {
+            const count = 
+              activeCategories.filter(c => c !== 'all').length +
+              (JSON.stringify([...activeStatusFilters].sort()) !== JSON.stringify(["Current", "Upcoming"].sort()) ? 1 : 0) +
+              (minPrice !== "" || maxPrice !== "" ? 1 : 0);
+            return count > 0 ? `(${count})` : "";
+          })()}
+        </Text>
       </TouchableOpacity>
 
 
@@ -307,6 +342,18 @@ export default function FindScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
+              <Text style={s.filterLabel}>Status</Text>
+              <View style={s.catGrid}>
+                {[{ label: "All", value: "All" }, { label: "Upcoming", value: "Upcoming" }, { label: "Current", value: "Current" }, { label: "Past", value: "Past" }].map(c => (
+                  <TouchableOpacity
+                    key={c.value}
+                    onPress={() => handleStatusPress(c.value)}
+                    style={[s.catPill, pendingStatusFilters.includes(c.value) && s.catPillActive, { marginBottom: 8, marginRight: 8 }]}
+                  >
+                    <Text style={[s.catText, pendingStatusFilters.includes(c.value) && s.catTextActive]}>{c.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <Text style={s.filterLabel}>Categories</Text>
               <View style={s.catGrid}>
                 {CATEGORIES.map(c => (
