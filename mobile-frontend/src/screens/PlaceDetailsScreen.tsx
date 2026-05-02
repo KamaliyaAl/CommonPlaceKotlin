@@ -13,7 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { api } from "../api";
-import type { PlaceEntry, PlaceCategory } from "../types";
+import type { PlaceEntry, PlaceCategory, PlaceReview } from "../types";
+import { usePlaces } from "../context/PlacesContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,15 +87,26 @@ export default function PlaceDetailsScreen() {
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
     const placeId: string = route?.params?.placeId;
+    const { togglePlaceFavourite, isPlaceFavourite } = usePlaces();
 
     const [place, setPlace] = useState<PlaceEntry | null>(null);
     const [loading, setLoading] = useState(true);
+    const [reviews, setReviews] = useState<PlaceReview[]>([]);
 
     useEffect(() => {
         api.getPlaceEntries().then((all: PlaceEntry[]) => {
             setPlace(all.find((p) => p.id === placeId) ?? null);
         }).catch(console.error).finally(() => setLoading(false));
     }, [placeId]);
+
+    useEffect(() => {
+        if (!placeId) return;
+        api.getPlaceReviews(placeId).then(setReviews).catch(console.error);
+    }, [placeId]);
+
+    const avgRating = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0;
 
     if (loading) {
         return (
@@ -128,26 +140,47 @@ export default function PlaceDetailsScreen() {
         <SafeAreaView style={s.safe}>
             <ScrollView contentContainerStyle={s.container}>
                 {/* Cover image */}
-                {place.imageUri ? (
-                    <Image source={{ uri: place.imageUri }} style={s.cover} resizeMode="cover" />
-                ) : (
-                    <View style={[s.cover, s.coverPlaceholder]}>
+                <View>
+                    {place.imageUri ? (
+                        <Image source={{ uri: place.imageUri }} style={s.cover} resizeMode="cover" />
+                    ) : (
+                        <View style={[s.cover, s.coverPlaceholder]}>
+                            <MaterialCommunityIcons
+                                name={CATEGORY_ICON[cat] as any}
+                                size={64}
+                                color="#8AAFB1"
+                            />
+                        </View>
+                    )}
+                    <TouchableOpacity
+                        style={s.heartOverlay}
+                        onPress={() => togglePlaceFavourite(place)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
                         <MaterialCommunityIcons
-                            name={CATEGORY_ICON[cat] as any}
-                            size={64}
-                            color="#8AAFB1"
+                            name={isPlaceFavourite(place.id) ? "heart" : "heart-outline"}
+                            size={26}
+                            color="#fff"
                         />
-                    </View>
-                )}
+                    </TouchableOpacity>
+                </View>
 
                 <View style={s.body}>
                     {/* Title + rating */}
                     <View style={s.titleRow}>
                         <Text style={s.title}>{place.name}</Text>
-                        <View style={s.ratingBox}>
-                            <MaterialCommunityIcons name="star" size={16} color="#FFB800" />
-                            <Text style={s.ratingText}>4.5</Text>
-                        </View>
+                        <TouchableOpacity
+                            style={s.ratingBox}
+                            onPress={() => navigation.navigate("PlaceReviews", { placeId: place.id })}
+                        >
+                            <Text style={s.ratingText}>{avgRating.toFixed(1)}</Text>
+                            <Text style={{ fontSize: 15, marginLeft: 4 }}>😊</Text>
+                            <Text style={s.reviewsCountText}>
+                                {reviews.length > 0
+                                    ? `${reviews.length} review${reviews.length === 1 ? "" : "s"}`
+                                    : "Be first!"}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Category + open status */}
@@ -219,14 +252,24 @@ export default function PlaceDetailsScreen() {
                         </>
                     )}
 
-                    {/* Coordinates */}
+                    {/* Show on map */}
                     {(!!place.latitude || !!place.longitude) && (
-                        <>
-                            <Text style={s.sectionTitle}>Location</Text>
-                            <Text selectable style={s.desc}>
-                                Lat: {place.latitude?.toFixed(5)}  Lng: {place.longitude?.toFixed(5)}
-                            </Text>
-                        </>
+                        <TouchableOpacity
+                            style={s.mapBtn}
+                            onPress={() =>
+                                (navigation as any).navigate("Map", {
+                                    screen: "MapMain",
+                                    params: {
+                                        placeId: place.id,
+                                        latitude: place.latitude,
+                                        longitude: place.longitude,
+                                    },
+                                })
+                            }
+                        >
+                            <MaterialCommunityIcons name="map-marker-outline" size={20} color="#fff" />
+                            <Text style={s.mapBtnText}>Show on the map</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
             </ScrollView>
@@ -243,6 +286,14 @@ const s = StyleSheet.create({
     container: { paddingBottom: 90 },
     center: { flex: 1, alignItems: "center", justifyContent: "center" },
     cover: { width: "100%", height: 220 },
+    heartOverlay: {
+        position: "absolute",
+        top: 14,
+        right: 14,
+        backgroundColor: "rgba(0,0,0,0.35)",
+        borderRadius: 20,
+        padding: 6,
+    },
     coverPlaceholder: {
         backgroundColor: "#E6F4F1",
         alignItems: "center",
@@ -260,11 +311,12 @@ const s = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#FFF9E6",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 10,
     },
-    ratingText: { marginLeft: 4, fontSize: 14, fontWeight: "700", color: "#FFB800" },
+    ratingText: { fontSize: 14, fontWeight: "700", color: "#111" },
+    reviewsCountText: { marginLeft: 4, fontSize: 12, color: "#888", fontWeight: "600" },
     badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
     categoryBadge: {
         flexDirection: "row",
@@ -300,6 +352,22 @@ const s = StyleSheet.create({
     hoursRow: { flexDirection: "row", justifyContent: "space-between" },
     hoursDay: { fontSize: 14, color: "#333", fontWeight: "500" },
     hoursTime: { fontSize: 14, color: "#555" },
+    mapBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        marginTop: 20,
+        marginBottom: 8,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: "#3B7D7A",
+    },
+    mapBtnText: {
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: 15,
+    },
     backBtn: {
         position: "absolute",
         left: 16,

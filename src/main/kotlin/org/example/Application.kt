@@ -79,6 +79,7 @@ fun Application.configureRouting() {
         placesRoutes()
         placeEntryRoutes()
         reviewRoutes()
+        placeReviewRoutes()
         registrationRoutes()
         notificationRoutes()
         uploadRoutes()

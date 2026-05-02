@@ -295,6 +295,33 @@ export const api = {
     return true;
   },
 
+  // Favourite Places
+  async getFavouritePlaces(userId: string): Promise<import('./types').PlaceEntry[]> {
+    const response = await fetch(`${API_URL}/favourites/places/${userId}`);
+    if (!response.ok) throw new Error('Failed to fetch favourite places');
+    return await response.json();
+  },
+
+  async addFavouritePlace(userId: string, placeId: string) {
+    const response = await fetch(`${API_URL}/favourites/places`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, placeId }),
+    });
+    if (!response.ok) throw new Error('Failed to add favourite place');
+    return await response.json();
+  },
+
+  async removeFavouritePlace(userId: string, placeId: string) {
+    const response = await fetch(`${API_URL}/favourites/places`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, placeId }),
+    });
+    if (!response.ok) throw new Error('Failed to remove favourite place');
+    return true;
+  },
+
   // Place Entries
   async getPlaceEntries(filters?: { organizerId?: string }) {
     let url = `${API_URL}/place-entries`;
@@ -354,6 +381,48 @@ export const api = {
       body: JSON.stringify(review),
     });
     if (!response.ok) throw new Error('Failed to submit review');
+    return await response.json();
+  },
+
+  async getPlaceReviews(placeId: string, sortBy: 'rating' | 'date' = 'date'): Promise<import('./types').PlaceReview[]> {
+    const response = await fetch(`${API_URL}/place-reviews/${placeId}?sortBy=${sortBy}`);
+    if (!response.ok) throw new Error('Failed to fetch place reviews');
+    return await response.json();
+  },
+
+  async submitPlaceReview(review: {
+    placeId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    reviewText: string;
+    adviceText?: string;
+    imageUri?: string | null;
+  }): Promise<import('./types').PlaceReview> {
+    const response = await fetch(`${API_URL}/place-reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review),
+    });
+    if (!response.ok) throw new Error('Failed to submit place review');
+    return await response.json();
+  },
+
+  async updatePlaceReview(reviewId: string, review: {
+    placeId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    reviewText: string;
+    adviceText?: string;
+    imageUri?: string | null;
+  }): Promise<import('./types').PlaceReview> {
+    const response = await fetch(`${API_URL}/place-reviews/${reviewId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review),
+    });
+    if (!response.ok) throw new Error('Failed to update place review');
     return await response.json();
   },
 

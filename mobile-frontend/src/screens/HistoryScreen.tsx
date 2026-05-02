@@ -59,12 +59,13 @@ export default function HistoryScreen() {
   const formatDate = (event: Place) => {
     const dateStr = event.startTime ?? event.date;
     try {
-      return new Intl.DateTimeFormat("ru-RU", {
+      const hasTime = dateStr.includes("T");
+      return new Intl.DateTimeFormat("en-GB", {
         timeZone: "Asia/Nicosia",
-        day: "2-digit",
+        day: "numeric",
         month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
+        year: "numeric",
+        ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
       }).format(new Date(dateStr));
     } catch {
       return event.date;

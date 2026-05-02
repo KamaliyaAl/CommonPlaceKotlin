@@ -8,8 +8,8 @@ import {
     ScrollView,
     Image,
     Alert,
+    SafeAreaView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
@@ -157,7 +157,6 @@ export default function CreatePlaceScreen() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<PlaceCategory>("other");
-    const [address, setAddress] = useState("");
     const [phone, setPhone] = useState("");
     const [website, setWebsite] = useState("");
     const [openingHours, setOpeningHours] = useState<OpeningHoursData>({});
@@ -236,7 +235,6 @@ export default function CreatePlaceScreen() {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 category,
-                address: address.trim() || undefined,
                 phone: phone.trim() || undefined,
                 website: website.trim() || undefined,
                 openingHours: hoursJson,
@@ -250,7 +248,6 @@ export default function CreatePlaceScreen() {
             setName("");
             setDescription("");
             setCategory("other");
-            setAddress("");
             setPhone("");
             setWebsite("");
             setOpeningHours({});
@@ -268,7 +265,7 @@ export default function CreatePlaceScreen() {
         <SafeAreaView style={styles.safe}>
             {/* Toggle Event / Place */}
             <View style={styles.toggleRow}>
-                <Pressable style={styles.toggleBtn} onPress={() => navigation.navigate("AddMain")}>
+                <Pressable style={styles.toggleBtn} onPress={() => navigation.replace("AddMain")}>
                     <Text style={styles.toggleBtnText}>Event</Text>
                 </Pressable>
                 <View style={[styles.toggleBtn, styles.toggleBtnActive]}>
@@ -334,17 +331,6 @@ export default function CreatePlaceScreen() {
                             multiline
                             numberOfLines={4}
                             textAlignVertical="top"
-                        />
-                    </View>
-
-                    {/* Address */}
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Address</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={address}
-                            onChangeText={setAddress}
-                            placeholder="e.g. 12 Makariou Ave, Limassol"
                         />
                     </View>
 

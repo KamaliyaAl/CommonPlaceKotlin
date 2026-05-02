@@ -91,10 +91,31 @@ data class Review(
 )
 
 @Serializable
+data class PlaceReview(
+    val id: String = "",
+    val placeId: String = "",
+    val userId: String = "",
+    val userName: String = "",
+    val rating: Double = 0.0,
+    val reviewText: String = "",
+    val adviceText: String? = null,
+    val imageUri: String? = null,
+    val timestamp: String? = null
+)
+
+@Serializable
 data class FavouriteEvent(
     val id: String = "",
     val userId: String = "",
     val eventId: String = "",
+    val favourite: Boolean = false
+)
+
+@Serializable
+data class FavouritePlace(
+    val id: String = "",
+    val userId: String = "",
+    val placeId: String = "",
     val favourite: Boolean = false
 )
 

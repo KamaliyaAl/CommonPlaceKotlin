@@ -31,8 +31,8 @@ import CreatePlaceScreen from "../screens/CreatePlaceScreen";
 function AddNavigator() {
     return (
         <AddStack.Navigator screenOptions={{ headerShown: false }}>
-            <AddStack.Screen name="AddMain" component={AddScreen} />
-            <AddStack.Screen name="CreatePlace" component={CreatePlaceScreen} />
+            <AddStack.Screen name="AddMain" component={AddScreen} options={{ animation: 'none' }} />
+            <AddStack.Screen name="CreatePlace" component={CreatePlaceScreen} options={{ animation: 'none' }} />
             <AddStack.Screen
                 name="LocationPicker"
                 component={LocationPickerScreen}

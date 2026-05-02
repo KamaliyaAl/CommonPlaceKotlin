@@ -29,6 +29,18 @@ export type Review = {
   timestamp?: string;
 };
 
+export type PlaceReview = {
+  id: string;
+  placeId: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1–5
+  reviewText: string;
+  adviceText?: string;
+  imageUri?: string | null;
+  timestamp?: string;
+};
+
 export type PlaceCategory = "restaurant" | "cafe" | "bar" | "gym" | "park" | "museum" | "gallery" | "hotel" | "shop" | "other";
 
 export type PlaceEntry = {

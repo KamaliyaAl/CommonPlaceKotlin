@@ -189,7 +189,7 @@ export default function AddScreen() {
                 <Pressable
                     style={styles.toggleBtn}
                     // @ts-ignore
-                    onPress={() => navigation.navigate("CreatePlace")}
+                    onPress={() => navigation.replace("CreatePlace")}
                 >
                     <Text style={styles.toggleBtnText}>Place</Text>
                 </Pressable>

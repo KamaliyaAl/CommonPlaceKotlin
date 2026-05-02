@@ -162,6 +162,21 @@ const CATEGORY_LABEL: Record<Category, string> = {
     other: "Other",
 };
 
+const formatEventDate = (dateStr: string) => {
+    try {
+        const hasTime = dateStr.includes("T");
+        return new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Asia/Nicosia",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+        }).format(new Date(dateStr));
+    } catch {
+        return dateStr;
+    }
+};
+
 const getDaysArray = () => {
     const days: string[] = [];
     const today = new Date();
@@ -505,7 +520,7 @@ export default function OrganizerMenuScreen() {
                                 )}
                                 <View style={s.eventInfo}>
                                     <Text style={s.eventTitle}>{event.title}</Text>
-                                    <Text style={s.eventDate}>{event.date}</Text>
+                                    <Text style={s.eventDate}>{formatEventDate(event.startTime ?? event.date)}</Text>
                                     <View style={s.catBadge}>
                                         <Text style={s.catText}>{CATEGORY_LABEL[event.category as Category]}</Text>
                                     </View>

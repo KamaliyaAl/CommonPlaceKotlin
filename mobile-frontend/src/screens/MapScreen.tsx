@@ -163,6 +163,8 @@ export default function MapScreen() {
     const [pendingMinPrice, setPendingMinPrice] = useState("");
     const [pendingMaxPrice, setPendingMaxPrice] = useState("");
 
+    const [selectedPlaceAvgRating, setSelectedPlaceAvgRating] = useState<number>(0);
+
     const mapRef = useRef<MapView>(null);
     const route = useRoute<any>();
     
@@ -184,6 +186,10 @@ export default function MapScreen() {
             setSelected({ kind: "event", id: params.eventId });
         }
 
+        if (params.placeId) {
+            setSelected({ kind: "place", id: params.placeId });
+        }
+
         // Legacy: only keep date redir if provided without event centering
         if (params.date && days.includes(params.date)) {
             setSelectedDate(params.date);
@@ -196,6 +202,19 @@ export default function MapScreen() {
             .then((data: PlaceEntry[]) => setPlaceEntries(data))
             .catch(console.error);
     }, []);
+
+    // Load rating for selected place
+    useEffect(() => {
+        if (selected?.kind !== "place") { setSelectedPlaceAvgRating(0); return; }
+        api.getPlaceReviews(selected.id)
+            .then((reviews) => {
+                const avg = reviews.length > 0
+                    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+                    : 0;
+                setSelectedPlaceAvgRating(avg);
+            })
+            .catch(() => setSelectedPlaceAvgRating(0));
+    }, [selected]);
 
     const fetchEvents = useCallback(async () => {
         try {
@@ -523,8 +542,8 @@ export default function MapScreen() {
                         </View>
                         <View style={styles.ratingRow}>
                             <View style={styles.ratingBox}>
-                                <MaterialCommunityIcons name="star" size={14} color="#FFB800" />
-                                <Text style={styles.ratingText}>4.5</Text>
+                                <Text style={{ fontSize: 13 }}>😊</Text>
+                                <Text style={styles.ratingText}>{selectedPlaceAvgRating.toFixed(1)}</Text>
                             </View>
                             {isOpenNow(selectedPlace.openingHours) !== null && (
                                 <View style={[

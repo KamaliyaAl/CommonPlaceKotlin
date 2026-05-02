@@ -8,87 +8,154 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEvents } from "../context/EventsContext";
+import { usePlaces } from "../context/PlacesContext";
 
 export default function FavouritesScreen() {
   const { favourites, refreshFavourites, toggleFavourite, isFavourite } = useEvents();
+  const { favouritePlaces, refreshPlaceFavourites, togglePlaceFavourite, isPlaceFavourite } = usePlaces();
   const navigation = useNavigation<any>();
 
   useFocusEffect(
     useCallback(() => {
       refreshFavourites();
-    }, [refreshFavourites])
+      refreshPlaceFavourites();
+    }, [refreshFavourites, refreshPlaceFavourites])
   );
 
   return (
     <SafeAreaView style={s.safe}>
       <Text style={s.title}>Favourites</Text>
 
-      <FlatList
-        data={favourites}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={favourites.length === 0 ? s.emptyWrap : s.list}
-        ListEmptyComponent={
+      <ScrollView contentContainerStyle={s.scroll}>
+        {/* ── Events ── */}
+        <Text style={s.sectionHeader}>Events</Text>
+        {favourites.length === 0 ? (
           <Text style={s.emptyText}>No favourite events yet</Text>
-        }
-        renderItem={({ item }) => (
-          <View style={s.card}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
-              activeOpacity={0.8}
-              style={s.cardMain}
-            >
-              {item.imageUri ? (
-                <Image source={{ uri: item.imageUri }} style={s.thumb} />
-              ) : (
-                <View style={s.thumb} />
-              )}
-
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>{item.title}</Text>
-                <Text style={s.cardDesc}>{item.description}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={s.heartAbsolute}
-              onPress={() => toggleFavourite(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <MaterialCommunityIcons
-                name={isFavourite(item.id) ? "heart" : "heart-outline"}
-                size={26}
-                color={isFavourite(item.id) ? "#C0392B" : "#111"}
-              />
-            </TouchableOpacity>
-
-            <View style={s.cardBottomRow}>
-              <View style={s.ratingWrap}>
-                <Text style={s.ratingText}>
-                  {(item.rating || 0).toFixed(1)} ({item.reviewsCount || 0} review{(item.reviewsCount || 0) === 1 ? "" : "s"})
-                </Text>
-                <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
-              </View>
+        ) : (
+          favourites.map((item) => (
+            <View key={item.id} style={s.card}>
               <TouchableOpacity
-                onPress={() => {
-                  (navigation as any).navigate('Map', {
-                    screen: 'MapMain',
-                    params: {
-                      eventId: item.id,
-                      latitude: item.lat,
-                      longitude: item.lng,
-                    },
-                  });
-                }}
+                onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
+                activeOpacity={0.8}
+                style={s.cardMain}
               >
-                <Text style={s.mapText}>Show on the map</Text>
+                {item.imageUri ? (
+                  <Image source={{ uri: item.imageUri }} style={s.thumb} />
+                ) : (
+                  <View style={s.thumb} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{item.title}</Text>
+                  <Text style={s.cardDesc}>{item.description}</Text>
+                </View>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={s.heartAbsolute}
+                onPress={() => toggleFavourite(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialCommunityIcons
+                  name={isFavourite(item.id) ? "heart" : "heart-outline"}
+                  size={26}
+                  color={isFavourite(item.id) ? "#C0392B" : "#111"}
+                />
+              </TouchableOpacity>
+
+              <View style={s.cardBottomRow}>
+                <View style={s.ratingWrap}>
+                  <Text style={s.ratingText}>
+                    {(item.rating || 0).toFixed(1)} ({item.reviewsCount || 0} review{(item.reviewsCount || 0) === 1 ? "" : "s"})
+                  </Text>
+                  <MaterialCommunityIcons name="emoticon-happy-outline" size={20} color="#111" />
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    (navigation as any).navigate('Map', {
+                      screen: 'MapMain',
+                      params: { eventId: item.id, latitude: item.lat, longitude: item.lng },
+                    });
+                  }}
+                >
+                  <Text style={s.mapText}>Show on the map</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          ))
         )}
-      />
+
+        {/* ── Places ── */}
+        <Text style={[s.sectionHeader, { marginTop: 24 }]}>Places</Text>
+        {favouritePlaces.length === 0 ? (
+          <Text style={s.emptyText}>No favourite places yet</Text>
+        ) : (
+          favouritePlaces.map((item) => (
+            <View key={item.id} style={s.card}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PlaceDetails', { placeId: item.id })}
+                activeOpacity={0.8}
+                style={s.cardMain}
+              >
+                {item.imageUri ? (
+                  <Image source={{ uri: item.imageUri }} style={s.thumb} />
+                ) : (
+                  <View style={[s.thumb, s.thumbPlaceholder]}>
+                    <MaterialCommunityIcons name="map-marker" size={28} color="#8AAFB1" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{item.name}</Text>
+                  {!!item.description && (
+                    <Text style={s.cardDesc} numberOfLines={2}>{item.description}</Text>
+                  )}
+                  {!!item.address && (
+                    <Text style={s.cardMeta} numberOfLines={1}>{item.address}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={s.heartAbsolute}
+                onPress={() => togglePlaceFavourite(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialCommunityIcons
+                  name={isPlaceFavourite(item.id) ? "heart" : "heart-outline"}
+                  size={26}
+                  color={isPlaceFavourite(item.id) ? "#C0392B" : "#111"}
+                />
+              </TouchableOpacity>
+
+              {(!!item.latitude || !!item.longitude) && (
+                <View style={s.cardBottomRow}>
+                  <View />
+                  <TouchableOpacity
+                    onPress={() =>
+                      (navigation as any).navigate("Map", {
+                        screen: "MapMain",
+                        params: {
+                          placeId: item.id,
+                          latitude: item.latitude,
+                          longitude: item.longitude,
+                        },
+                      })
+                    }
+                  >
+                    <Text style={s.mapText}>Show on the map</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))
+        )}
+
+        <View style={{ height: 80 }} />
+      </ScrollView>
+
       <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
         <Text style={s.backText}>Back</Text>
       </TouchableOpacity>
@@ -109,19 +176,21 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
   },
-  list: {
+  scroll: {
     paddingHorizontal: 16,
     paddingBottom: 80,
   },
-  emptyWrap: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 10,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#666",
     fontWeight: "600",
+    marginBottom: 8,
   },
   card: {
     backgroundColor: "#D9D9D9",
@@ -140,6 +209,11 @@ const s = StyleSheet.create({
     backgroundColor: "#777",
     borderRadius: 12,
   },
+  thumbPlaceholder: {
+    backgroundColor: "#E6F4F1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cardTitle: {
     fontSize: 16,
     fontWeight: "800",
@@ -148,6 +222,12 @@ const s = StyleSheet.create({
   cardDesc: {
     marginTop: 4,
     color: "#222",
+    fontSize: 13,
+  },
+  cardMeta: {
+    marginTop: 4,
+    color: "#555",
+    fontSize: 12,
   },
   heartAbsolute: {
     position: "absolute",
