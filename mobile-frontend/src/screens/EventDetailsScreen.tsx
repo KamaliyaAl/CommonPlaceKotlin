@@ -298,9 +298,6 @@ export default function EventDetailsScreen() {
                 ) : (
                   <>
                     <Text style={s.organizerName}>{organizer?.name ?? 'Unknown organizer'}</Text>
-                    {!!organizer?.email && (
-                      <Text style={s.organizerTag}>{organizer.email}</Text>
-                    )}
                   </>
                 )}
               </View>

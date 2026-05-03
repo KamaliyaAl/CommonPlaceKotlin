@@ -43,7 +43,6 @@ export default function UsersListScreen() {
       <View style={s.avatar} />
       <View style={s.info}>
         <Text style={s.name}>{item.name}</Text>
-        <Text style={s.email}>{item.email}</Text>
       </View>
       <Text style={s.arrow}>{">"}</Text>
     </TouchableOpacity>
