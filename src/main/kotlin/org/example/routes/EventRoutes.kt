@@ -91,7 +91,8 @@ fun Route.eventRoutes() {
                 }
 
                 val documents = firestoreQuery.get().get()
-                var filtered = documents.map { docToEvent(it) }
+                // Exclude legacy Google Places API rows that pre-date the move to place_entries
+                var filtered = documents.map { docToEvent(it) }.filter { it.isFromApi != true }
 
                 // In-memory filter for date substring match (simplest approach for complex Timestamp mappings)
                 if (!date.isNullOrBlank()) {

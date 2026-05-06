@@ -10,8 +10,8 @@ fun Routing.placesRoutes() {
     /**
      * POST /api/admin/places/fetch
      *
-     * Triggers a Google Places API fetch for event-related venues in Cyprus
-     * and stores new results in the Firestore "Events" collection.
+     * Triggers a Google Places API fetch for venues in Cyprus and stores new
+     * results in the Firestore "place_entries" collection.
      *
      * Already-imported places (identified by their Google Place ID) are skipped
      * automatically, so this endpoint is safe to call multiple times.
@@ -27,7 +27,7 @@ fun Routing.placesRoutes() {
      * }
      */
     post("/api/admin/places/fetch") {
-        val result = GooglePlacesService.fetchAndStoreEvents()
+        val result = GooglePlacesService.fetchAndStorePlaces()
         val status = if (result.stored > 0 || result.skipped >= 0) HttpStatusCode.OK
         else HttpStatusCode.InternalServerError
         call.respond(status, result)

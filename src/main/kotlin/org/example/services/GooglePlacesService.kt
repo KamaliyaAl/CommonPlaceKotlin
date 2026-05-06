@@ -30,8 +30,29 @@ private data class PlaceResult(
     val formattedAddress: String? = null,
     val location: LatLngLiteral? = null,
     val types: List<String>? = null,
-    val priceLevel: String? = null,
-    val photos: List<PlacePhoto>? = null
+    val photos: List<PlacePhoto>? = null,
+    val websiteUri: String? = null,
+    val nationalPhoneNumber: String? = null,
+    val internationalPhoneNumber: String? = null,
+    val regularOpeningHours: OpeningHours? = null
+)
+
+@Serializable
+private data class OpeningHours(
+    val periods: List<OpeningPeriod>? = null
+)
+
+@Serializable
+private data class OpeningPeriod(
+    val open: TimePoint? = null,
+    val close: TimePoint? = null
+)
+
+@Serializable
+private data class TimePoint(
+    val day: Int? = null,
+    val hour: Int? = null,
+    val minute: Int? = null
 )
 
 @Serializable
@@ -104,7 +125,7 @@ object GooglePlacesService {
     )
 
 
-    suspend fun fetchAndStoreEvents(): FetchResult = withContext(Dispatchers.IO) {
+    suspend fun fetchAndStorePlaces(): FetchResult = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) {
             return@withContext FetchResult(
                 stored = 0, skipped = 0, errors = 0,
@@ -138,9 +159,9 @@ object GooglePlacesService {
                 knownPlaceIds.add(placeId)
 
                 try {
-                    storePlaceAsEvent(place)
+                    storePlaceAsPlaceEntry(place)
                     stored++
-                    logger.info("Stored event: {}", place.displayName?.text)
+                    logger.info("Stored place: {}", place.displayName?.text)
                 } catch (e: Exception) {
                     logger.error("Failed to store '{}': {}", place.displayName?.text, e.message)
                     errors++
@@ -157,11 +178,11 @@ object GooglePlacesService {
     }
 
 
-    /** Returns all Place IDs that are already present in the Events collection. */
+    /** Returns all Place IDs that are already present in the place_entries collection. */
     private fun loadStoredPlaceIds(): MutableSet<String> {
         return try {
             FirebaseService.firestore
-                .collection("Events")
+                .collection("place_entries")
                 .whereGreaterThan("placeId", "")   // matches non-empty string placeId fields only
                 .get().get()
                 .documents
@@ -199,7 +220,9 @@ object GooglePlacesService {
                 "X-Goog-FieldMask",
                 "places.id,places.displayName,places.editorialSummary," +
                         "places.formattedAddress,places.location,places.types," +
-                        "places.priceLevel,places.photos"
+                        "places.photos,places.websiteUri," +
+                        "places.nationalPhoneNumber,places.internationalPhoneNumber," +
+                        "places.regularOpeningHours"
             )
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
@@ -241,65 +264,83 @@ object GooglePlacesService {
     }
 
     /**
-     * Creates a Geoposition document and an Event document in Firestore for the given place.
-     * Stores `placeId` on the event so future runs can skip it.
+     * Creates a PlaceEntry document in Firestore for the given Google place.
+     * Stores `placeId` on the entry so future runs can skip it.
      */
-    private fun storePlaceAsEvent(place: PlaceResult) {
+    private fun storePlaceAsPlaceEntry(place: PlaceResult) {
         val firestore = FirebaseService.firestore
 
-        // 1. Geoposition
-        val geopositionId: String? = place.location
-            ?.takeIf { it.latitude != null && it.longitude != null }
-            ?.let { loc ->
-                val geoRef = firestore.collection("Geopositions").document()
-                geoRef.set(
-                    mapOf("latitude" to loc.latitude!!, "longitude" to loc.longitude!!)
-                ).get()
-                geoRef.id
-            }
-
-        // 2. Photo URL
         val imageUri: String? = place.photos?.firstOrNull()?.name?.let { getPhotoUri(it) }
 
-        // 3. Event document
-        val eventRef = firestore.collection("Events").document()
-        val eventData = HashMap<String, Any>()
-        eventData["id"] = eventRef.id                        // mirrors existing POST handler
-        eventData["name"] = place.displayName?.text ?: ""
-        eventData["description"] = place.editorialSummary?.text
-            ?: place.formattedAddress
-            ?: ""
-        eventData["category"] = mapCategory(place.types)
-        eventData["placeId"] = place.id ?: ""
-        eventData["isFromApi"] = true
+        val placeRef = firestore.collection("place_entries").document()
+        val data = HashMap<String, Any>()
+        data["name"] = place.displayName?.text ?: ""
+        data["description"] = place.editorialSummary?.text ?: ""
+        data["category"] = mapCategory(place.types)
+        data["address"] = place.formattedAddress ?: ""
+        data["latitude"] = place.location?.latitude ?: 0.0
+        data["longitude"] = place.location?.longitude ?: 0.0
+        data["placeId"] = place.id ?: ""
+        data["isFromApi"] = true
 
-        geopositionId?.let { eventData["geopositionId"] = it }
-        imageUri?.let { eventData["imageUri"] = it }
-        mapPrice(place.priceLevel)?.let { eventData["price"] = it }
+        imageUri?.let { data["imageUri"] = it }
+        place.websiteUri?.takeIf { it.isNotBlank() }?.let { data["website"] = it }
+        (place.nationalPhoneNumber ?: place.internationalPhoneNumber)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { data["phone"] = it }
+        convertOpeningHours(place.regularOpeningHours)?.let { data["openingHours"] = it }
 
-        eventRef.set(eventData).get()
+        placeRef.set(data).get()
     }
 
-    // Maps Google Places types to the Category values defined in the frontend:
-    // types.ts: "food" | "sport" | "nature" | "culture" | "other"
+    // Maps Google Places types to PlaceCategory values used by the frontend
+    // (mobile-frontend/src/types — restaurant/cafe/bar/gym/park/museum/gallery/hotel/shop/other).
     private fun mapCategory(types: List<String>?): String {
         if (types.isNullOrEmpty()) return "other"
         return when {
-            types.any { it in setOf("restaurant", "cafe", "bakery", "bar", "meal_delivery", "meal_takeaway") } -> "food"
-            types.any { it in setOf("stadium", "gym", "sports_complex", "golf_course", "bowling_alley") } -> "sport"
-            types.any { it in setOf("park", "natural_feature", "campground", "beach", "hiking_area") } -> "nature"
-            types.any { it in setOf("museum", "art_gallery", "library", "performing_arts_theater",
-                "night_club", "movie_theater", "amusement_park", "casino", "tourist_attraction") } -> "culture"
+            types.any { it in setOf("restaurant", "meal_delivery", "meal_takeaway") } -> "restaurant"
+            types.any { it in setOf("cafe", "bakery") } -> "cafe"
+            types.any { it in setOf("bar", "night_club") } -> "bar"
+            types.any { it in setOf("gym", "stadium", "sports_complex", "golf_course", "bowling_alley") } -> "gym"
+            types.any { it in setOf("park", "natural_feature", "campground", "beach", "hiking_area") } -> "park"
+            types.any { it in setOf("museum") } -> "museum"
+            types.any { it in setOf("art_gallery") } -> "gallery"
+            types.any { it in setOf("lodging", "hotel") } -> "hotel"
+            types.any { it in setOf("store", "shopping_mall", "supermarket", "clothing_store") } -> "shop"
             else -> "other"
         }
     }
 
-    private fun mapPrice(priceLevel: String?): String? = when (priceLevel) {
-        "PRICE_LEVEL_FREE" -> "Free"
-        "PRICE_LEVEL_INEXPENSIVE" -> "€"
-        "PRICE_LEVEL_MODERATE" -> "€€"
-        "PRICE_LEVEL_EXPENSIVE" -> "€€€"
-        "PRICE_LEVEL_VERY_EXPENSIVE" -> "€€€€"
-        else -> null
+    /**
+     * Converts Google's `regularOpeningHours.periods` into the JSON format expected
+     * by the mobile frontend's `isOpenNow` helper:
+     *   { "sun": { "open": "09:00", "close": "17:00" }, "mon": {...}, ... }
+     * If multiple periods exist for the same day, the first one wins.
+     */
+    private fun convertOpeningHours(hours: OpeningHours?): String? {
+        val periods = hours?.periods ?: return null
+        val dayKeys = listOf("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+        val schedule = linkedMapOf<String, Pair<String, String>>()
+        for (period in periods) {
+            val open = period.open ?: continue
+            val close = period.close ?: continue
+            val dayIdx = open.day ?: continue
+            if (dayIdx !in 0..6) continue
+            val key = dayKeys[dayIdx]
+            if (schedule.containsKey(key)) continue
+            schedule[key] = "%02d:%02d".format(open.hour ?: 0, open.minute ?: 0) to
+                    "%02d:%02d".format(close.hour ?: 0, close.minute ?: 0)
+        }
+        if (schedule.isEmpty()) return null
+        val obj = buildJsonObject {
+            schedule.forEach { (day, times) ->
+                putJsonObject(day) {
+                    put("open", times.first)
+                    put("close", times.second)
+                }
+            }
+        }
+        return obj.toString()
     }
+
 }
