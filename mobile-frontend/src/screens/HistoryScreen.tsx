@@ -15,6 +15,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useEvents } from "../context/EventsContext";
 import { api } from "../api";
 import { Place } from "../types";
+import { parseCyprusDate, formatCyprusDate } from "../utils/time";
 
 export default function HistoryScreen() {
   const navigation = useNavigation<any>();
@@ -32,12 +33,12 @@ export default function HistoryScreen() {
       const registeredIds = new Set(registrations.map((r: any) => r.eventId));
       const matched = events.filter(e => registeredIds.has(e.id));
       // Sort: upcoming first (by date), then past
-      const now = new Date();
+      const nowMs = Date.now();
       const sorted = [...matched].sort((a, b) => {
-        const da = new Date(a.startTime ?? a.date).getTime();
-        const db = new Date(b.startTime ?? b.date).getTime();
-        const aFuture = da >= now.getTime();
-        const bFuture = db >= now.getTime();
+        const da = parseCyprusDate(a.startTime ?? a.date).getTime();
+        const db = parseCyprusDate(b.startTime ?? b.date).getTime();
+        const aFuture = da >= nowMs;
+        const bFuture = db >= nowMs;
         if (aFuture && !bFuture) return -1;
         if (!aFuture && bFuture) return 1;
         return aFuture ? da - db : db - da;
@@ -58,28 +59,17 @@ export default function HistoryScreen() {
 
   const formatDate = (event: Place) => {
     const dateStr = event.startTime ?? event.date;
-    try {
-      const hasTime = dateStr.includes("T");
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Nicosia",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-      }).format(new Date(dateStr));
-    } catch {
-      return event.date;
-    }
+    return formatCyprusDate(dateStr);
   };
 
   const getEventStatus = (event: Place) => {
-  const now = Date.now();
-  const start = new Date(event.startTime ?? event.date).getTime();
-  const end = new Date(event.endTime ?? event.date).getTime();
-  if (now < start) return "Upcoming";
-  if (now > end) return "Past";
-  return "Current";
-};
+    const now = Date.now();
+    const start = parseCyprusDate(event.startTime ?? event.date).getTime();
+    const end = parseCyprusDate(event.endTime ?? event.date).getTime();
+    if (now < start) return "Upcoming";
+    if (now > end) return "Past";
+    return "Current";
+  };
 
   return (
     <SafeAreaView style={s.safe}>

@@ -21,6 +21,7 @@ import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 import { Category, Place, PlaceEntry, PlaceCategory } from "../types";
 import { locationStore } from "../store/locationStore";
+import { buildCyprusTimestamp, formatCyprusDate } from "../utils/time";
 
 // --- Opening Hours Types (from CreatePlaceScreen) ---
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -162,20 +163,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
     other: "Other",
 };
 
-const formatEventDate = (dateStr: string) => {
-    try {
-        const hasTime = dateStr.includes("T");
-        return new Intl.DateTimeFormat("en-GB", {
-            timeZone: "Asia/Nicosia",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-        }).format(new Date(dateStr));
-    } catch {
-        return dateStr;
-    }
-};
+const formatEventDate = (dateStr: string) => formatCyprusDate(dateStr);
 
 const getDaysArray = () => {
     const days: string[] = [];
@@ -321,12 +309,8 @@ export default function OrganizerMenuScreen() {
         if (!selectedEvent) return;
         if (!name.trim()) return Alert.alert("Validation", "Please enter event name");
 
-        const startTimestamp = startTime.trim()
-            ? `${startDate}T${startTime.trim()}:00`
-            : `${startDate}T00:00:00`;
-        const endTimestamp = endTime.trim()
-            ? `${endDate}T${endTime.trim()}:00`
-            : `${endDate}T23:59:59`;
+        const startTimestamp = buildCyprusTimestamp(startDate, startTime, "start");
+        const endTimestamp = buildCyprusTimestamp(endDate, endTime, "end");
 
         try {
             await api.updateEvent(selectedEvent.id, {

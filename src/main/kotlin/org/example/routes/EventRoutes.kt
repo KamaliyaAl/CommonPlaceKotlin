@@ -101,22 +101,30 @@ fun Route.eventRoutes() {
                     }
                 }
 
-                // In-memory filter for minStartTime
+                // In-memory filter for minStartTime — event times are stored as
+                // Cyprus wall-clock; we strip any timezone marker before parsing
+                // so legacy entries that were saved with `Z` still compare correctly.
                 if (!minStartTimeStr.isNullOrBlank()) {
+                    val cyprusZone = java.time.ZoneId.of("Asia/Nicosia")
+                    fun parseCyprus(s: String): Instant? {
+                        val noTz = s.trim()
+                            .removeSuffix("Z").removeSuffix("z")
+                            .replace(Regex("[+-]\\d{2}:?\\d{2}$"), "")
+                            .take(19)
+                        return try {
+                            java.time.LocalDateTime.parse(noTz).atZone(cyprusZone).toInstant()
+                        } catch (e: Exception) { null }
+                    }
+
                     val minInstant = if (minStartTimeStr == "now") {
-                        // Use start of today instead of exact "now" to show all of today's events
-                        Instant.now().atZone(java.time.ZoneOffset.UTC).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
-                    } else try { Instant.parse(minStartTimeStr) } catch(e: Exception) { null }
-                    
+                        // Start of today in Cyprus, so all of today's events stay visible.
+                        Instant.now().atZone(cyprusZone).toLocalDate().atStartOfDay(cyprusZone).toInstant()
+                    } else parseCyprus(minStartTimeStr)
+
                     if (minInstant != null) {
-                        val cyprusZone = java.time.ZoneId.of("Asia/Nicosia")
                         filtered = filtered.filter {
-                            val eventInstant = it.startTime?.let { s ->
-                                try { Instant.parse(s) } catch(e: Exception) {
-                                    try { java.time.LocalDateTime.parse(s).atZone(cyprusZone).toInstant() } catch(e2: Exception) { null }
-                                }
-                            }
-                            eventInstant == null || eventInstant.isAfter(minInstant) || eventInstant.equals(minInstant)
+                            val eventInstant = it.startTime?.let { parseCyprus(it) }
+                            eventInstant == null || !eventInstant.isBefore(minInstant)
                         }
                     }
                 }

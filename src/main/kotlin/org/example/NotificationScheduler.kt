@@ -28,27 +28,26 @@ object NotificationScheduler {
     }
 
     /**
-     * Parses a startTime string that may or may not include timezone info.
-     * Stored values look like "2026-04-17T18:00:00" (Cyprus local, no Z) or
-     * "2026-04-17T18:00:00Z" (UTC).  We treat no-timezone strings as Cyprus
-     * local time (Europe/Nicosia) so the 1h/24h windows fire at the right moment.
+     * Event times are always Cyprus wall-clock. We strip any timezone marker
+     * (`Z` or `±HH:MM`) before parsing so legacy entries that were saved with
+     * `Z` (a frontend bug) still fire notifications at the wall-clock the
+     * user originally typed.
      */
     private fun parseStartTime(raw: String): Instant? {
-        val cleaned = raw.trim().take(19) // "2026-04-17T18:00:00"
-
-        // 1. String already has timezone info — parse as-is
-        if (raw.length > 19) {
-            try { return Instant.parse(raw.trim()) } catch (_: Exception) {}
-        }
-
-        // 2. No timezone — treat as Cyprus local time (how users enter it in the app)
-        try {
-            return LocalDateTime.parse(cleaned)
+        val trimmed = raw.trim()
+        // Drop trailing Z and any explicit numeric offset.
+        val noTz = trimmed
+            .removeSuffix("Z")
+            .removeSuffix("z")
+            .replace(Regex("[+-]\\d{2}:?\\d{2}$"), "")
+        val cleaned = noTz.take(19) // "2026-04-17T18:00:00"
+        return try {
+            LocalDateTime.parse(cleaned)
                 .atZone(ZoneId.of("Asia/Nicosia"))
                 .toInstant()
-        } catch (_: Exception) {}
-
-        return null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun checkAndSendNotifications() {

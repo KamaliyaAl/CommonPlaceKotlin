@@ -19,6 +19,7 @@ import { useAuth } from "../auth/AuthContext";
 import { Category, Place } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
 import { api } from "../api";
+import { parseCyprusDate, formatCyprusHHmm } from "../utils/time";
 
 const CATEGORY_LABEL: Record<Category, string> = {
   food: "Food",
@@ -28,18 +29,12 @@ const CATEGORY_LABEL: Record<Category, string> = {
   other: "Other",
 };
 
-const formatTime = (isoString?: string | null) => {
-  if (!isoString) return "?";
-  if (!isoString.includes("T")) return isoString;
-  const timePart = isoString.split("T")[1];
-  if (!timePart) return "?";
-  return timePart.slice(0, 5); // HH:mm
-};
+const formatTime = (isoString?: string | null) => formatCyprusHHmm(isoString);
 
 const getEventStatus = (event: Place) => {
   const now = Date.now();
-  const start = new Date(event.startTime ?? event.date).getTime();
-  const end = new Date(event.endTime ?? event.date).getTime();
+  const start = parseCyprusDate(event.startTime ?? event.date).getTime();
+  const end = parseCyprusDate(event.endTime ?? event.date).getTime();
   if (now < start) return "Upcoming";
   if (now > end) return "Past";
   return "Current";

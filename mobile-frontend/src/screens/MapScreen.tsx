@@ -23,6 +23,7 @@ import { MapStackParamList } from "./MapStack";
 import { useEvents } from "../context/EventsContext";
 import { Place, Category, PlaceEntry, PlaceCategory } from "../types";
 import { api } from "../api";
+import { parseCyprusDate, formatCyprusHHmm } from "../utils/time";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -103,11 +104,7 @@ const getDaysArray = () => {
     return days;
 };
 
-const formatTime = (isoString?: string | null) => {
-    if (!isoString) return "?";
-    if (!isoString.includes("T")) return isoString;
-    return isoString.split("T")[1]?.slice(0, 5) ?? "?";
-};
+const formatTime = (isoString?: string | null) => formatCyprusHHmm(isoString);
 
 function isOpenNow(hoursJson?: string | null): boolean | null {
     if (!hoursJson) return null;
@@ -227,9 +224,9 @@ export default function MapScreen() {
             });
             const filtered = res.filter(item => {
                 if (activeStatusFilters.includes('All')) return true;
-                const now = new Date().getTime();
-                const start = new Date(item.startTime).getTime();
-                const end = new Date(item.endTime).getTime();
+                const now = Date.now();
+                const start = parseCyprusDate(item.startTime).getTime();
+                const end = parseCyprusDate(item.endTime).getTime();
                 const status = now < start ? 'Upcoming' : now > end ? 'Past' : 'Current';
                 return activeStatusFilters.includes(status);
             });

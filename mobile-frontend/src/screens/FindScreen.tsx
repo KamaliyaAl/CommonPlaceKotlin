@@ -23,6 +23,7 @@ import { Place } from "../types";
 
 import { api } from "../api";
 import { Category } from "../types";
+import { parseCyprusDate, formatCyprusHHmm } from "../utils/time";
 
 const CATEGORIES: { label: string; value: string }[] = [
   { label: "All", value: "all" },
@@ -62,13 +63,7 @@ function DayPill({ d, n, active }: { d: string; n: number; active?: boolean }) {
   );
 }
 
-const formatTime = (isoString?: string | null) => {
-  if (!isoString) return "?";
-  if (!isoString.includes("T")) return isoString;
-  const timePart = isoString.split("T")[1];
-  if (!timePart) return "?";
-  return timePart.slice(0, 5); // HH:mm as stored (Cyprus local time)
-};
+const formatTime = (isoString?: string | null) => formatCyprusHHmm(isoString);
 
 export default function FindScreen() {
   const navigation = useNavigation<any>();
@@ -160,9 +155,9 @@ export default function FindScreen() {
         });
         const filtered = res.filter(item => {
           if (activeStatusFilters.includes('All')) return true;
-          const now = new Date().getTime();
-          const start = new Date(item.startTime).getTime();
-          const end = new Date(item.endTime).getTime();
+          const now = Date.now();
+          const start = parseCyprusDate(item.startTime).getTime();
+          const end = parseCyprusDate(item.endTime).getTime();
           const status = now < start ? 'Upcoming' : now > end ? 'Past' : 'Current';
           return activeStatusFilters.includes(status);
         });

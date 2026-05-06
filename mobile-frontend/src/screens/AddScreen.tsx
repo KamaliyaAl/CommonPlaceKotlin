@@ -18,6 +18,7 @@ import { useIsFocused, useNavigation, useRoute } from "@react-navigation/native"
 import { Calendar } from "react-native-calendars";
 import { useEvents } from "../context/EventsContext";
 import { locationStore } from "../store/locationStore";
+import { buildCyprusTimestamp } from "../utils/time";
 import { Category } from "../types";
 import type { BottomTabParamList } from "../navigation/Tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -136,12 +137,8 @@ export default function AddScreen() {
             return Alert.alert("Validation", "End time should be in HH:mm format (e.g. 21:00)");
         }
 
-        const startTimestamp = startTime.trim()
-            ? `${startDate}T${startTime.trim()}:00Z`
-            : `${startDate}T00:00:00Z`;
-        const endTimestamp = endTime.trim()
-            ? `${endDate}T${endTime.trim()}:00Z`
-            : `${endDate}T23:59:59Z`;
+        const startTimestamp = buildCyprusTimestamp(startDate, startTime, "start");
+        const endTimestamp = buildCyprusTimestamp(endDate, endTime, "end");
 
         try {
             const created = await addEvent({
