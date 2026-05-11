@@ -361,19 +361,28 @@ export default function ProfileScreen() {
                 <Text style={s.editSmallText}>Edit ✎</Text>
               </TouchableOpacity>
             ) : currentUser ? (
-              <TouchableOpacity 
-                style={[
-                  s.editSmall, 
-                  isFriend && { backgroundColor: "#dc3545" },
-                  hasSentRequest && !isFriend && { backgroundColor: "#6c757d" }
-                ]} 
-                onPress={isFriend ? handleRemoveFriend : (hasSentRequest ? undefined : handleAddFriend)}
-                disabled={hasSentRequest && !isFriend}
-              >
-                <Text style={s.editSmallText}>
-                  {isFriend ? "Remove friend" : (hasSentRequest ? "Request Sent" : "Send Friend Request")}
-                </Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                <TouchableOpacity
+                  style={[
+                    s.editSmall,
+                    isFriend && { backgroundColor: "#dc3545" },
+                    hasSentRequest && !isFriend && { backgroundColor: "#6c757d" }
+                  ]}
+                  onPress={isFriend ? handleRemoveFriend : (hasSentRequest ? undefined : handleAddFriend)}
+                  disabled={hasSentRequest && !isFriend}
+                >
+                  <Text style={s.editSmallText}>
+                    {isFriend ? "Remove friend" : (hasSentRequest ? "Request Sent" : "Send Friend Request")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.editSmall, { backgroundColor: "#3B7D7A" }]}
+                  // @ts-ignore
+                  onPress={() => navigation.navigate("FriendEvents", { userId, userName: user.name })}
+                >
+                  <Text style={s.editSmallText}>Joined events</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
           </View>
         </View>

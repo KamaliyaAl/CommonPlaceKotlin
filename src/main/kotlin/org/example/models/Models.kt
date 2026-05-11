@@ -34,6 +34,8 @@ data class Event(
     val time: String? = null,
     val imageUri: String? = null,
     val isFromApi: Boolean? = null,  // true = fetched via Places API, false = added manually, null = legacy
+    val rating: Double? = null,       // computed from Reviews on read
+    val reviewsCount: Int? = null,    // computed from Reviews on read
 )
 
 @Serializable
@@ -132,7 +134,9 @@ data class PlaceEntry(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val imageUri: String? = null,
-    val organizerId: String? = null
+    val organizerId: String? = null,
+    val rating: Double? = null,       // computed from PlaceReviews on read
+    val reviewsCount: Int? = null,    // computed from PlaceReviews on read
 )
 
 @Serializable

@@ -64,16 +64,28 @@ fun Route.favouriteRoutes() {
                 val fullEvents = withLogging("GET full favourite events for $userId") {
                     val favDocs = FirebaseService.firestore.collection(favouriteEventsCollection)
                         .whereEqualTo("user_id", userId).get().get()
-                    
-                    val eventIds = favDocs.map { 
-                        it.getString("event_id") ?: it.getString("location_id") ?: "" 
+
+                    val eventIds = favDocs.map {
+                        it.getString("event_id") ?: it.getString("location_id") ?: ""
                     }.filter { it.isNotEmpty() }
-                    
-                    eventIds.mapNotNull { eventId ->
+
+                    val raw = eventIds.mapNotNull { eventId ->
                         val doc = FirebaseService.firestore.collection(eventsCollection).document(eventId).get().get()
-                        if (doc.exists()) {
-                            docToEvent(doc)
-                        } else null
+                        if (doc.exists()) docToEvent(doc) else null
+                    }
+
+                    // Attach rating / reviewsCount, matching /api/events behaviour.
+                    val reviewDocs = FirebaseService.firestore.collection("Reviews").get().get()
+                    val byEvent = mutableMapOf<String, MutableList<Double>>()
+                    for (doc in reviewDocs) {
+                        val eId = doc.getString("eventId") ?: continue
+                        val r = doc.getDouble("rating") ?: continue
+                        byEvent.getOrPut(eId) { mutableListOf() }.add(r)
+                    }
+                    raw.map { e ->
+                        val ratings = byEvent[e.id]
+                        if (ratings.isNullOrEmpty()) e.copy(rating = null, reviewsCount = 0)
+                        else e.copy(rating = ratings.sum() / ratings.size, reviewsCount = ratings.size)
                     }
                 }
                 call.respond(fullEvents)

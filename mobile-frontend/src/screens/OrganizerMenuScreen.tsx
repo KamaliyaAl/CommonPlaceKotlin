@@ -21,7 +21,7 @@ import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 import { Category, Place, PlaceEntry, PlaceCategory } from "../types";
 import { locationStore } from "../store/locationStore";
-import { buildCyprusTimestamp, formatCyprusDate } from "../utils/time";
+import { buildCyprusTimestamp, formatCyprusDate, parseCyprusDate } from "../utils/time";
 
 // --- Opening Hours Types (from CreatePlaceScreen) ---
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -309,8 +309,20 @@ export default function OrganizerMenuScreen() {
         if (!selectedEvent) return;
         if (!name.trim()) return Alert.alert("Validation", "Please enter event name");
 
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (startTime && !timeRegex.test(startTime.trim())) {
+            return Alert.alert("Validation", "Start time should be in HH:mm format (e.g. 18:00)");
+        }
+        if (endTime && !timeRegex.test(endTime.trim())) {
+            return Alert.alert("Validation", "End time should be in HH:mm format (e.g. 21:00)");
+        }
+
         const startTimestamp = buildCyprusTimestamp(startDate, startTime, "start");
         const endTimestamp = buildCyprusTimestamp(endDate, endTime, "end");
+
+        if (parseCyprusDate(endTimestamp).getTime() <= parseCyprusDate(startTimestamp).getTime()) {
+            return Alert.alert("Validation", "End time must be after start time");
+        }
 
         try {
             await api.updateEvent(selectedEvent.id, {
@@ -327,9 +339,9 @@ export default function OrganizerMenuScreen() {
             Alert.alert("Success", "Event updated successfully");
             setEditModalVisible(false);
             fetchMyEvents();
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            Alert.alert("Error", "Failed to update event");
+            Alert.alert("Error", e?.message || "Failed to update event");
         }
     };
 

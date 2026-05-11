@@ -24,6 +24,7 @@ import { useEvents } from "../context/EventsContext";
 import { Place, Category, PlaceEntry, PlaceCategory } from "../types";
 import { api } from "../api";
 import { parseCyprusDate, formatCyprusHHmm } from "../utils/time";
+import { useAuth } from "../auth/AuthContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,9 @@ export default function MapScreen() {
     const [activeStatusFilters, setActiveStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
+    const [minRating, setMinRating] = useState("");
+    const [maxRating, setMaxRating] = useState("");
+    const [friendsOnly, setFriendsOnly] = useState(false);
 
     // Internal modal states
     const [pendingContentType, setPendingContentType] = useState<"all" | "events" | "places">("all");
@@ -159,6 +163,10 @@ export default function MapScreen() {
     const [pendingStatusFilters, setPendingStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
     const [pendingMinPrice, setPendingMinPrice] = useState("");
     const [pendingMaxPrice, setPendingMaxPrice] = useState("");
+    const [pendingMinRating, setPendingMinRating] = useState("");
+    const [pendingMaxRating, setPendingMaxRating] = useState("");
+    const [pendingFriendsOnly, setPendingFriendsOnly] = useState(false);
+    const { user } = useAuth();
 
     const [selectedPlaceAvgRating, setSelectedPlaceAvgRating] = useState<number>(0);
 
@@ -220,7 +228,10 @@ export default function MapScreen() {
                 categories: activeCategories,
                 date: selectedDate || undefined,
                 minPrice: minPrice || undefined,
-                maxPrice: maxPrice || undefined
+                maxPrice: maxPrice || undefined,
+                minRating: minRating || undefined,
+                maxRating: maxRating || undefined,
+                friendsOf: friendsOnly && user?.uid ? user.uid : undefined,
             });
             const filtered = res.filter(item => {
                 if (activeStatusFilters.includes('All')) return true;
@@ -234,7 +245,7 @@ export default function MapScreen() {
         } catch (e) {
             console.error(e);
         }
-    }, [query, activeCategories, selectedDate, minPrice, maxPrice, activeStatusFilters]);
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice, minRating, maxRating, activeStatusFilters, friendsOnly, user?.uid]);
 
     const isFocused = useIsFocused();
 
@@ -249,11 +260,16 @@ export default function MapScreen() {
             fetchEvents();
         }, 300);
         return () => clearTimeout(delayDebounceFn);
-    }, [query, activeCategories, selectedDate, minPrice, maxPrice, activeStatusFilters]);
+    }, [query, activeCategories, selectedDate, minPrice, maxPrice, minRating, maxRating, activeStatusFilters, friendsOnly, user?.uid]);
 
     const filteredPlaces = useMemo(() => {
         if (activeContentType === "events") return [];
+        // The "Friends are joining" filter is intrinsically about events
+        // (places have no join semantics), so hide all places when it's on.
+        if (friendsOnly) return [];
         const q = query.trim().toLowerCase();
+        const minR = minRating === "" ? null : parseFloat(minRating);
+        const maxR = maxRating === "" ? null : parseFloat(maxRating);
 
         return placeEntries.filter((p) => {
             const matchesQuery = !q || (
@@ -272,9 +288,20 @@ export default function MapScreen() {
                 if (!activeCategories.includes(mappedCat)) return false;
             }
 
+            // Rating range. Mirrors the backend event rating semantics:
+            // - minR > 0 excludes unrated places (rating null)
+            // - maxR keeps unrated places (treated as "not exceeding cap")
+            const r = p.rating ?? null;
+            if (minR !== null && minR > 0) {
+                if (r === null || r < minR) return false;
+            }
+            if (maxR !== null) {
+                if (r !== null && r > maxR) return false;
+            }
+
             return true;
         });
-    }, [placeEntries, query, activeCategories, activePlaceCategories, activeContentType]);
+    }, [placeEntries, query, activeCategories, activePlaceCategories, activeContentType, minRating, maxRating, friendsOnly]);
 
     const selectedEvent = useMemo(
         () => selected?.kind === "event" ? filteredEvents.find((e) => e.id === selected.id) ?? null : null,
@@ -331,6 +358,9 @@ export default function MapScreen() {
         setActivePlaceCategories(pendingPlaceCategories);
         setMinPrice(pendingMinPrice);
         setMaxPrice(pendingMaxPrice);
+        setMinRating(pendingMinRating);
+        setMaxRating(pendingMaxRating);
+        setFriendsOnly(pendingFriendsOnly);
         setIsFiltersOpen(false);
     };
 
@@ -341,12 +371,18 @@ export default function MapScreen() {
         setPendingPlaceCategories(["all"]);
         setPendingMinPrice("");
         setPendingMaxPrice("");
+        setPendingMinRating("");
+        setPendingMaxRating("");
+        setPendingFriendsOnly(false);
         setActiveContentType("all");
         setActiveCategories(["all"]);
         setActiveStatusFilters(["Upcoming", "Current"]);
         setActivePlaceCategories(["all"]);
         setMinPrice("");
         setMaxPrice("");
+        setMinRating("");
+        setMaxRating("");
+        setFriendsOnly(false);
         setIsFiltersOpen(false);
     };
 
@@ -357,6 +393,9 @@ export default function MapScreen() {
         setPendingPlaceCategories(activePlaceCategories);
         setPendingMinPrice(minPrice);
         setPendingMaxPrice(maxPrice);
+        setPendingMinRating(minRating);
+        setPendingMaxRating(maxRating);
+        setPendingFriendsOnly(friendsOnly);
         setIsFiltersOpen(true);
     };
 
@@ -365,7 +404,9 @@ export default function MapScreen() {
         (JSON.stringify([...activeStatusFilters].sort()) !== JSON.stringify(["Current", "Upcoming"]) ? 1 : 0) +
         activePlaceCategories.filter(c => c !== "all").length +
         (activeContentType !== "all" ? 1 : 0) +
-        (minPrice !== "" ? 1 : 0);
+        (minPrice !== "" ? 1 : 0) +
+        (minRating !== "" || maxRating !== "" ? 1 : 0) +
+        (friendsOnly ? 1 : 0);
 
     const renderCalendarDay = useCallback(({ item }: { item: string }) => {
         const d = new Date(item);
@@ -639,6 +680,23 @@ export default function MapScreen() {
                                     </>
                                 )}
 
+                                {/* Social filter (events only, requires sign-in) */}
+                                {pendingContentType !== "places" && user && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 16 }]}>Social</Text>
+                                        <View style={styles.chipsWrap}>
+                                            <TouchableOpacity
+                                                onPress={() => setPendingFriendsOnly(v => !v)}
+                                                style={[styles.chip, pendingFriendsOnly && styles.chipActive]}
+                                            >
+                                                <Text style={[styles.chipText, pendingFriendsOnly && styles.chipTextActive]}>
+                                                    Friends are joining
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+
                                 {/* Event categories */}
                                 {pendingContentType !== "places" && (
                                     <>
@@ -722,6 +780,60 @@ export default function MapScreen() {
                                                             <View style={[styles.priceBubbleWrap, { left: marker2 }]}>
                                                                 <View style={styles.priceBubble}>
                                                                     <Text style={styles.priceBubbleText}>€{e.twoMarkerValue ?? 50}</Text>
+                                                                </View>
+                                                                <View style={styles.priceBubbleArrow} />
+                                                            </View>
+                                                        </View>
+                                                    );
+                                                }}
+                                            />
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Rating filter (events only) */}
+                                {pendingContentType !== "places" && (
+                                    <>
+                                        <Text style={[styles.filterLabel, { marginTop: 24 }]}>
+                                            Rating: {(pendingMinRating === "" ? 0 : Number(pendingMinRating)).toFixed(1)}★ – {(pendingMaxRating === "" ? 5 : Number(pendingMaxRating)).toFixed(1)}★
+                                        </Text>
+                                        <View style={styles.sliderWrap}>
+                                            <MultiSlider
+                                                values={[
+                                                    pendingMinRating === "" ? 0 : parseFloat(pendingMinRating),
+                                                    pendingMaxRating === "" ? 5 : parseFloat(pendingMaxRating),
+                                                ]}
+                                                min={0}
+                                                max={5}
+                                                step={0.5}
+                                                sliderLength={300}
+                                                allowOverlap={true}
+                                                snapped
+                                                enableLabel
+                                                onValuesChange={(vals) => {
+                                                    const [mn, mx] = vals;
+                                                    setPendingMinRating(mn === 0 ? "" : String(mn));
+                                                    setPendingMaxRating(mx === 5 ? "" : String(mx));
+                                                }}
+                                                selectedStyle={styles.sliderSelected}
+                                                unselectedStyle={styles.sliderUnselected}
+                                                trackStyle={styles.sliderTrack}
+                                                containerStyle={styles.sliderContainer}
+                                                customMarker={() => <View style={styles.sliderThumb} />}
+                                                customLabel={(e) => {
+                                                    const marker1 = e.oneMarkerLeftPosition ?? 0;
+                                                    const marker2 = e.twoMarkerLeftPosition ?? 300;
+                                                    return (
+                                                        <View style={styles.labelsOverlay} pointerEvents="none">
+                                                            <View style={[styles.priceBubbleWrap, { left: marker1 }]}>
+                                                                <View style={styles.priceBubble}>
+                                                                    <Text style={styles.priceBubbleText}>{Number(e.oneMarkerValue ?? 0).toFixed(1)}★</Text>
+                                                                </View>
+                                                                <View style={styles.priceBubbleArrow} />
+                                                            </View>
+                                                            <View style={[styles.priceBubbleWrap, { left: marker2 }]}>
+                                                                <View style={styles.priceBubble}>
+                                                                    <Text style={styles.priceBubbleText}>{Number(e.twoMarkerValue ?? 5).toFixed(1)}★</Text>
                                                                 </View>
                                                                 <View style={styles.priceBubbleArrow} />
                                                             </View>

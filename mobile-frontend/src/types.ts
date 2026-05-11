@@ -56,6 +56,8 @@ export type PlaceEntry = {
   longitude?: number;
   imageUri?: string | null;
   organizerId?: string;
+  rating?: number | null;
+  reviewsCount?: number | null;
 };
 
 export type Place = {

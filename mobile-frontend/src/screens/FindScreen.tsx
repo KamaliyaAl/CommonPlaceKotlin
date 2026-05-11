@@ -24,6 +24,7 @@ import { Place } from "../types";
 import { api } from "../api";
 import { Category } from "../types";
 import { parseCyprusDate, formatCyprusHHmm } from "../utils/time";
+import { useAuth } from "../auth/AuthContext";
 
 const CATEGORIES: { label: string; value: string }[] = [
   { label: "All", value: "all" },
@@ -67,6 +68,7 @@ const formatTime = (isoString?: string | null) => formatCyprusHHmm(isoString);
 
 export default function FindScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { toggleFavourite, isFavourite } = useEvents();
   const [query, setQuery] = useState("");
   const days = useMemo(() => getDaysArray(), []);
@@ -74,6 +76,9 @@ export default function FindScreen() {
 
   const [maxPrice, setMaxPrice] = useState("");
   const [minPrice, setMinPrice] = useState("");
+  const [minRating, setMinRating] = useState("");
+  const [maxRating, setMaxRating] = useState("");
+  const [friendsOnly, setFriendsOnly] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filteredEvents, setFilteredEvents] = useState<Place[]>([]);
 
@@ -84,6 +89,9 @@ export default function FindScreen() {
   const [pendingStatusFilters, setPendingStatusFilters] = useState<string[]>(["Upcoming", "Current"]);
   const [pendingMinPrice, setPendingMinPrice] = useState("");
   const [pendingMaxPrice, setPendingMaxPrice] = useState("");
+  const [pendingMinRating, setPendingMinRating] = useState("");
+  const [pendingMaxRating, setPendingMaxRating] = useState("");
+  const [pendingFriendsOnly, setPendingFriendsOnly] = useState(false);
 
   const handleStatusPress = (val: string) => {
     if (val === "All") {
@@ -119,6 +127,9 @@ export default function FindScreen() {
     setActiveStatusFilters(pendingStatusFilters);
     setMinPrice(pendingMinPrice);
     setMaxPrice(pendingMaxPrice);
+    setMinRating(pendingMinRating);
+    setMaxRating(pendingMaxRating);
+    setFriendsOnly(pendingFriendsOnly);
     setIsFilterVisible(false);
   };
 
@@ -127,10 +138,16 @@ export default function FindScreen() {
     setPendingStatusFilters(["Upcoming", "Current"]);
     setPendingMinPrice("");
     setPendingMaxPrice("");
+    setPendingMinRating("");
+    setPendingMaxRating("");
+    setPendingFriendsOnly(false);
     setActiveCategories(["all"]);
     setActiveStatusFilters(["Upcoming", "Current"]);
     setMinPrice("");
     setMaxPrice("");
+    setMinRating("");
+    setMaxRating("");
+    setFriendsOnly(false);
     setIsFilterVisible(false);
   };
 
@@ -140,6 +157,9 @@ export default function FindScreen() {
     setPendingStatusFilters(activeStatusFilters);
     setPendingMinPrice(minPrice);
     setPendingMaxPrice(maxPrice);
+    setPendingMinRating(minRating);
+    setPendingMaxRating(maxRating);
+    setPendingFriendsOnly(friendsOnly);
     setIsFilterVisible(true);
   };
 
@@ -151,7 +171,10 @@ export default function FindScreen() {
           categories: activeCategories,
           date: activeDate || undefined,
           minPrice: minPrice || undefined,
-          maxPrice: maxPrice || undefined
+          maxPrice: maxPrice || undefined,
+          minRating: minRating || undefined,
+          maxRating: maxRating || undefined,
+          friendsOf: friendsOnly && user?.uid ? user.uid : undefined,
         });
         const filtered = res.filter(item => {
           if (activeStatusFilters.includes('All')) return true;
@@ -170,7 +193,7 @@ export default function FindScreen() {
       fetchFiltered();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [query, activeCategories, activeDate, minPrice, maxPrice, activeStatusFilters]);
+  }, [query, activeCategories, activeDate, minPrice, maxPrice, minRating, maxRating, activeStatusFilters, friendsOnly, user?.uid]);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -213,10 +236,12 @@ export default function FindScreen() {
         <MaterialCommunityIcons name="tune" size={20} color="#fff" />
         <Text style={s.filtersToggleText}>
           Filters {(() => {
-            const count = 
+            const count =
               activeCategories.filter(c => c !== 'all').length +
               (JSON.stringify([...activeStatusFilters].sort()) !== JSON.stringify(["Current", "Upcoming"].sort()) ? 1 : 0) +
-              (minPrice !== "" || maxPrice !== "" ? 1 : 0);
+              (minPrice !== "" || maxPrice !== "" ? 1 : 0) +
+              (minRating !== "" || maxRating !== "" ? 1 : 0) +
+              (friendsOnly ? 1 : 0);
             return count > 0 ? `(${count})` : "";
           })()}
         </Text>
@@ -349,6 +374,22 @@ export default function FindScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {user && (
+                <>
+                  <Text style={[s.filterLabel, { marginTop: 12 }]}>Social</Text>
+                  <View style={s.catGrid}>
+                    <TouchableOpacity
+                      onPress={() => setPendingFriendsOnly(v => !v)}
+                      style={[s.catPill, pendingFriendsOnly && s.catPillActive, { marginBottom: 8, marginRight: 8 }]}
+                    >
+                      <Text style={[s.catText, pendingFriendsOnly && s.catTextActive]}>
+                        Friends are joining
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
               <Text style={s.filterLabel}>Categories</Text>
               <View style={s.catGrid}>
                 {CATEGORIES.map(c => (
@@ -418,7 +459,57 @@ export default function FindScreen() {
                   }}
                 />
               </View>
-              <TouchableOpacity 
+
+              <Text style={[s.filterLabel, { marginTop: 20 }]}>
+                Rating: {(pendingMinRating === "" ? 0 : Number(pendingMinRating)).toFixed(1)}★ – {(pendingMaxRating === "" ? 5 : Number(pendingMaxRating)).toFixed(1)}★
+              </Text>
+              <View style={s.sliderWrap}>
+                <MultiSlider
+                  values={[
+                    pendingMinRating === "" ? 0 : parseFloat(pendingMinRating),
+                    pendingMaxRating === "" ? 5 : parseFloat(pendingMaxRating),
+                  ]}
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  sliderLength={300}
+                  allowOverlap={true}
+                  snapped
+                  enableLabel
+                  onValuesChange={(vals) => {
+                    const [mn, mx] = vals;
+                    setPendingMinRating(mn === 0 ? "" : String(mn));
+                    setPendingMaxRating(mx === 5 ? "" : String(mx));
+                  }}
+                  selectedStyle={s.sliderSelected}
+                  unselectedStyle={s.sliderUnselected}
+                  trackStyle={s.sliderTrack}
+                  containerStyle={s.sliderContainer}
+                  customMarker={() => <View style={s.sliderThumb} />}
+                  customLabel={(e) => {
+                    const marker1 = e.oneMarkerLeftPosition ?? 0;
+                    const marker2 = e.twoMarkerLeftPosition ?? 300;
+                    return (
+                      <View style={s.labelsOverlay} pointerEvents="none">
+                        <View style={[s.priceBubbleWrap, { left: marker1 }]}>
+                          <View style={s.priceBubble}>
+                            <Text style={s.priceBubbleText}>{Number(e.oneMarkerValue ?? 0).toFixed(1)}★</Text>
+                          </View>
+                          <View style={s.priceBubbleArrow} />
+                        </View>
+                        <View style={[s.priceBubbleWrap, { left: marker2 }]}>
+                          <View style={s.priceBubble}>
+                            <Text style={s.priceBubbleText}>{Number(e.twoMarkerValue ?? 5).toFixed(1)}★</Text>
+                          </View>
+                          <View style={s.priceBubbleArrow} />
+                        </View>
+                      </View>
+                    );
+                  }}
+                />
+              </View>
+
+              <TouchableOpacity
                 style={s.applyBtn}
                 onPress={applyFilters}
               >

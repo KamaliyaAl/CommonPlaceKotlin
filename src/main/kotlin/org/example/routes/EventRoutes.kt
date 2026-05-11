@@ -66,6 +66,77 @@ fun Route.eventRoutes() {
         }
     }
 
+    val cyprusZone = java.time.ZoneId.of("Asia/Nicosia")
+
+    fun parseCyprus(s: String?): Instant? {
+        if (s.isNullOrBlank()) return null
+        val noTz = s.trim()
+            .removeSuffix("Z").removeSuffix("z")
+            .replace(Regex("[+-]\\d{2}:?\\d{2}$"), "")
+            .take(19)
+        return try {
+            java.time.LocalDateTime.parse(noTz).atZone(cyprusZone).toInstant()
+        } catch (e: Exception) { null }
+    }
+
+    /** Returns an error message if start/end ordering is wrong, else null. */
+    fun validateEventTimes(start: String?, end: String?): String? {
+        val s = parseCyprus(start)
+        val e = parseCyprus(end)
+        if (s != null && e != null && !e.isAfter(s)) {
+            return "End time must be after start time"
+        }
+        return null
+    }
+
+    /**
+     * Computes average rating and review count per eventId. Single read of the
+     * Reviews collection; events with no reviews are absent from the map.
+     */
+    fun loadRatings(): Map<String, Pair<Double, Int>> {
+        val docs = FirebaseService.firestore.collection("Reviews").get().get()
+        val byEvent = mutableMapOf<String, MutableList<Double>>()
+        for (doc in docs) {
+            val eventId = doc.getString("eventId") ?: continue
+            val rating = doc.getDouble("rating") ?: continue
+            byEvent.getOrPut(eventId) { mutableListOf() }.add(rating)
+        }
+        return byEvent.mapValues { (_, ratings) ->
+            (ratings.sum() / ratings.size) to ratings.size
+        }
+    }
+
+    fun Event.withRating(ratings: Map<String, Pair<Double, Int>>): Event {
+        val (avg, count) = ratings[id] ?: return copy(rating = null, reviewsCount = 0)
+        return copy(rating = avg, reviewsCount = count)
+    }
+
+    /**
+     * Resolves the set of distinct user IDs that are friends of [userId].
+     * The Friendship_relations collection stores both directions on accept,
+     * but legacy rows may exist only one-way — we read both for safety.
+     */
+    fun friendsOf(userId: String): Set<String> {
+        if (userId.isBlank()) return emptySet()
+        val coll = FirebaseService.firestore.collection("Friendship_relations")
+        val asUser = coll.whereEqualTo("userId", userId).get().get()
+            .mapNotNull { it.getString("friendId") }
+        val asFriend = coll.whereEqualTo("friendId", userId).get().get()
+            .mapNotNull { it.getString("userId") }
+        return (asUser + asFriend).filter { it.isNotBlank() && it != userId }.toSet()
+    }
+
+    /** Event IDs that any of [userIds] have a registration for. */
+    fun eventsJoinedBy(userIds: Set<String>): Set<String> {
+        if (userIds.isEmpty()) return emptySet()
+        // Firestore `whereIn` supports up to 10 values; chunk to be safe.
+        val regColl = FirebaseService.firestore.collection("event_registrations")
+        return userIds.chunked(10).flatMap { chunk ->
+            regColl.whereIn("userId", chunk).get().get()
+                .mapNotNull { it.getString("eventId") }
+        }.filter { it.isNotBlank() }.toSet()
+    }
+
     route("/api/events") {
         get {
             val categoryParam = call.request.queryParameters["category"]
@@ -75,8 +146,13 @@ fun Route.eventRoutes() {
             val queryParam = call.request.queryParameters["query"]?.lowercase()
             val minPrice = call.request.queryParameters["minPrice"]?.toDoubleOrNull()
             val maxPrice = call.request.queryParameters["maxPrice"]?.toDoubleOrNull()
+            val minRating = call.request.queryParameters["minRating"]?.toDoubleOrNull()
+            val maxRating = call.request.queryParameters["maxRating"]?.toDoubleOrNull()
             val organizerId = call.request.queryParameters["organizerId"]
             val minStartTimeStr = call.request.queryParameters["minStartTime"] // ISO string or "now"
+            // When set, restrict the results to events that at least one friend
+            // of [friendsOf] has joined. An empty friend list ⇒ empty result.
+            val friendsOfUser = call.request.queryParameters["friendsOf"]
 
             val events = withLogging("GET filtered events") {
                 var firestoreQuery: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
@@ -105,17 +181,6 @@ fun Route.eventRoutes() {
                 // Cyprus wall-clock; we strip any timezone marker before parsing
                 // so legacy entries that were saved with `Z` still compare correctly.
                 if (!minStartTimeStr.isNullOrBlank()) {
-                    val cyprusZone = java.time.ZoneId.of("Asia/Nicosia")
-                    fun parseCyprus(s: String): Instant? {
-                        val noTz = s.trim()
-                            .removeSuffix("Z").removeSuffix("z")
-                            .replace(Regex("[+-]\\d{2}:?\\d{2}$"), "")
-                            .take(19)
-                        return try {
-                            java.time.LocalDateTime.parse(noTz).atZone(cyprusZone).toInstant()
-                        } catch (e: Exception) { null }
-                    }
-
                     val minInstant = if (minStartTimeStr == "now") {
                         // Start of today in Cyprus, so all of today's events stay visible.
                         Instant.now().atZone(cyprusZone).toLocalDate().atStartOfDay(cyprusZone).toInstant()
@@ -123,7 +188,7 @@ fun Route.eventRoutes() {
 
                     if (minInstant != null) {
                         filtered = filtered.filter {
-                            val eventInstant = it.startTime?.let { parseCyprus(it) }
+                            val eventInstant = parseCyprus(it.startTime)
                             eventInstant == null || !eventInstant.isBefore(minInstant)
                         }
                     }
@@ -151,8 +216,40 @@ fun Route.eventRoutes() {
                         }
                     }
                 }
-                
-                filtered
+
+                // "Friends are joining" filter — events that at least one friend
+                // of [friendsOfUser] has a registration for. Resolved server-side
+                // so the client doesn't fan out N requests.
+                if (!friendsOfUser.isNullOrBlank()) {
+                    val friends = friendsOf(friendsOfUser)
+                    val joinedIds = if (friends.isEmpty()) emptySet() else eventsJoinedBy(friends)
+                    org.slf4j.LoggerFactory.getLogger("EventRoutes").info(
+                        "friendsOf=$friendsOfUser → ${friends.size} friends → ${joinedIds.size} joined event ids"
+                    )
+                    filtered = if (joinedIds.isEmpty()) emptyList()
+                               else filtered.filter { it.id in joinedIds }
+                }
+
+                // Attach computed rating/reviewsCount, then apply rating range filter.
+                // - A minRating of 0 (or null) doesn't exclude unrated events.
+                // - A positive minRating excludes events with no rating yet.
+                // - maxRating with no rating: include (treats unrated as "not exceeding cap").
+                val ratings = loadRatings()
+                var withRatings = filtered.map { it.withRating(ratings) }
+                if ((minRating != null && minRating > 0.0) || maxRating != null) {
+                    withRatings = withRatings.filter {
+                        val r = it.rating
+                        val meetsMin = when {
+                            minRating == null || minRating <= 0.0 -> true
+                            r == null -> false
+                            else -> r >= minRating
+                        }
+                        val meetsMax = maxRating == null || r == null || r <= maxRating
+                        meetsMin && meetsMax
+                    }
+                }
+
+                withRatings
             }
             call.respond(events)
         }
@@ -166,7 +263,7 @@ fun Route.eventRoutes() {
                 if (!doc.exists()) {
                     null
                 } else {
-                    docToEvent(doc)
+                    docToEvent(doc).withRating(loadRatings())
                 }
             }
             if (event == null) {
@@ -178,6 +275,9 @@ fun Route.eventRoutes() {
 
         post {
             val event = call.receive<Event>()
+            validateEventTimes(event.startTime, event.endTime)?.let {
+                return@post call.respond(HttpStatusCode.BadRequest, it)
+            }
             val docRef = FirebaseService.firestore.collection(collection).document()
             val data: Map<String, Any?> = mapOf(
                 "id" to docRef.id,
@@ -203,6 +303,9 @@ fun Route.eventRoutes() {
                 HttpStatusCode.BadRequest, "Missing id"
             )
             val event = call.receive<Event>()
+            validateEventTimes(event.startTime, event.endTime)?.let {
+                return@put call.respond(HttpStatusCode.BadRequest, it)
+            }
             val data: Map<String, Any?> = mapOf(
                 "id" to id,
                 "name" to event.name,

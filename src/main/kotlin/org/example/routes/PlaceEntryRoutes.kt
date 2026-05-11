@@ -27,15 +27,54 @@ fun Route.placeEntryRoutes() {
         organizerId = doc.getString("organizerId")
     )
 
+    /** Average rating + review count per placeId, read once per request. */
+    fun loadPlaceRatings(): Map<String, Pair<Double, Int>> {
+        val docs = FirebaseService.firestore.collection("PlaceReviews").get().get()
+        val byPlace = mutableMapOf<String, MutableList<Double>>()
+        for (doc in docs) {
+            val placeId = doc.getString("placeId") ?: continue
+            val rating = doc.getDouble("rating") ?: continue
+            byPlace.getOrPut(placeId) { mutableListOf() }.add(rating)
+        }
+        return byPlace.mapValues { (_, rs) -> (rs.sum() / rs.size) to rs.size }
+    }
+
+    fun PlaceEntry.withRating(ratings: Map<String, Pair<Double, Int>>): PlaceEntry {
+        val (avg, count) = ratings[id] ?: return copy(rating = null, reviewsCount = 0)
+        return copy(rating = avg, reviewsCount = count)
+    }
+
     route("/api/place-entries") {
         get {
             val organizerId = call.request.queryParameters["organizerId"]
+            val minRating = call.request.queryParameters["minRating"]?.toDoubleOrNull()
+            val maxRating = call.request.queryParameters["maxRating"]?.toDoubleOrNull()
+
             val places = withLogging("GET place-entries") {
                 var query: com.google.cloud.firestore.Query = FirebaseService.firestore.collection(collection)
                 if (!organizerId.isNullOrBlank()) {
                     query = query.whereEqualTo("organizerId", organizerId)
                 }
-                query.get().get().documents.map { docToPlaceEntry(it as QueryDocumentSnapshot) }
+                val raw = query.get().get().documents.map { docToPlaceEntry(it as QueryDocumentSnapshot) }
+                val ratings = loadPlaceRatings()
+                var withRatings = raw.map { it.withRating(ratings) }
+                // Same semantics as event rating filter:
+                // - minRating == 0 / null: keep unrated places
+                // - minRating > 0: drop unrated places
+                // - maxRating: unrated places pass through (treated as "not exceeding cap")
+                if ((minRating != null && minRating > 0.0) || maxRating != null) {
+                    withRatings = withRatings.filter {
+                        val r = it.rating
+                        val meetsMin = when {
+                            minRating == null || minRating <= 0.0 -> true
+                            r == null -> false
+                            else -> r >= minRating
+                        }
+                        val meetsMax = maxRating == null || r == null || r <= maxRating
+                        meetsMin && meetsMax
+                    }
+                }
+                withRatings
             }
             call.respond(places)
         }
@@ -48,7 +87,7 @@ fun Route.placeEntryRoutes() {
             if (!doc.exists()) {
                 call.respond(HttpStatusCode.NotFound, "Place not found")
             } else {
-                call.respond(docToPlaceEntry(doc as QueryDocumentSnapshot))
+                call.respond(docToPlaceEntry(doc as QueryDocumentSnapshot).withRating(loadPlaceRatings()))
             }
         }
 

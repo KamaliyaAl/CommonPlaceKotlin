@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export const api = {
-  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string; minStartTime?: string; organizerId?: string }) {
+  async getEvents(filters?: { query?: string; categories?: string[]; date?: string; minPrice?: string; maxPrice?: string; minRating?: string; maxRating?: string; minStartTime?: string; organizerId?: string; friendsOf?: string }) {
     let url = `${API_URL}/events`;
     if (filters) {
       const params = new URLSearchParams();
@@ -12,8 +12,11 @@ export const api = {
       if (filters.date) params.append('date', filters.date);
       if (filters.minPrice) params.append('minPrice', filters.minPrice);
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.minRating) params.append('minRating', filters.minRating);
+      if (filters.maxRating) params.append('maxRating', filters.maxRating);
       if (filters.minStartTime) params.append('minStartTime', filters.minStartTime);
       if (filters.organizerId) params.append('organizerId', filters.organizerId);
+      if (filters.friendsOf) params.append('friendsOf', filters.friendsOf);
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
     }
@@ -81,6 +84,10 @@ export const api = {
         imageUri: event.imageUri
       })
     });
+    if (!eventResponse.ok) {
+      const msg = await eventResponse.text().catch(() => 'Failed to create event');
+      throw new Error(msg || 'Failed to create event');
+    }
     const newEvent = await eventResponse.json();
     
     return {
@@ -105,7 +112,10 @@ export const api = {
         geopositionId: event.geopositionId
       })
     });
-    if (!response.ok) throw new Error('Failed to update event');
+    if (!response.ok) {
+      const msg = await response.text().catch(() => 'Failed to update event');
+      throw new Error(msg || 'Failed to update event');
+    }
     return await response.json();
   },
 
@@ -323,10 +333,15 @@ export const api = {
   },
 
   // Place Entries
-  async getPlaceEntries(filters?: { organizerId?: string }) {
+  async getPlaceEntries(filters?: { organizerId?: string; minRating?: string; maxRating?: string }) {
     let url = `${API_URL}/place-entries`;
-    if (filters?.organizerId) {
-      url += `?organizerId=${filters.organizerId}`;
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.organizerId) params.append('organizerId', filters.organizerId);
+      if (filters.minRating) params.append('minRating', filters.minRating);
+      if (filters.maxRating) params.append('maxRating', filters.maxRating);
+      const qs = params.toString();
+      if (qs) url += `?${qs}`;
     }
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch place entries');

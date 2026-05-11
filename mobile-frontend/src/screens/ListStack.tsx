@@ -9,6 +9,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import ReviewScreen from "../screens/ReviewScreen";
 import PlaceReviewScreen from "../screens/PlaceReviewScreen";
 import HistoryScreen from "../screens/HistoryScreen";
+import FriendEventsScreen from "../screens/FriendEventsScreen";
 
 export type ListStackParamList = {
   ListHome: undefined;
@@ -18,6 +19,7 @@ export type ListStackParamList = {
   EventDetails: { eventId: string };
   PlaceDetails: { placeId: string };
   UserProfile: { userId: string };
+  FriendEvents: { userId: string; userName?: string };
   Reviews: { eventId: string };
   PlaceReviews: { placeId: string };
   OrganizerMenu: undefined;
@@ -35,6 +37,7 @@ export default function ListStack() {
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} />
       <Stack.Screen name="UserProfile" component={ProfileScreen} />
+      <Stack.Screen name="FriendEvents" component={FriendEventsScreen} />
       <Stack.Screen name="Reviews" component={ReviewScreen} />
       <Stack.Screen name="PlaceReviews" component={PlaceReviewScreen} />
       <Stack.Screen name="OrganizerMenu" component={require("../screens/OrganizerMenuScreen").default} />

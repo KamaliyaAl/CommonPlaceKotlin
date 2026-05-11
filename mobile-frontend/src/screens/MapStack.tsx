@@ -6,12 +6,14 @@ import PlaceDetailsScreen from "../screens/PlaceDetailsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ReviewScreen from "../screens/ReviewScreen";
 import PlaceReviewScreen from "../screens/PlaceReviewScreen";
+import FriendEventsScreen from "../screens/FriendEventsScreen";
 
 export type MapStackParamList = {
   MapMain: { date?: string; eventId?: string; placeId?: string; latitude?: number; longitude?: number } | undefined;
   EventDetails: { eventId: string };
   PlaceDetails: { placeId: string };
   UserProfile: { userId: string };
+  FriendEvents: { userId: string; userName?: string };
   Reviews: { eventId: string };
   PlaceReviews: { placeId: string };
 };
@@ -25,6 +27,7 @@ export default function MapStack() {
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} />
       <Stack.Screen name="UserProfile" component={ProfileScreen} />
+      <Stack.Screen name="FriendEvents" component={FriendEventsScreen} />
       <Stack.Screen name="Reviews" component={ReviewScreen} />
       <Stack.Screen name="PlaceReviews" component={PlaceReviewScreen} />
     </Stack.Navigator>

@@ -10,6 +10,7 @@ import MapStack from "../screens/MapStack";
 import ProfileScreen from "../screens/ProfileScreen";
 import UsersListScreen from "../screens/UsersListScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import FriendEventsScreen from "../screens/FriendEventsScreen";
 
 export type BottomTabParamList = {
     AddTab: undefined;
@@ -47,6 +48,7 @@ function UsersNavigator() {
         <UsersStack.Navigator screenOptions={{ headerShown: false }}>
             <UsersStack.Screen name="UsersList" component={UsersListScreen} />
             <UsersStack.Screen name="UserProfile" component={ProfileScreen} />
+            <UsersStack.Screen name="FriendEvents" component={FriendEventsScreen} />
         </UsersStack.Navigator>
     );
 }
@@ -56,6 +58,7 @@ function ProfileNavigator() {
         <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
             <ProfileStack.Screen name="MyProfile" component={ProfileScreen} />
             <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />
+            <ProfileStack.Screen name="FriendEvents" component={FriendEventsScreen} />
         </ProfileStack.Navigator>
     );
 }
