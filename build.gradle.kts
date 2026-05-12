@@ -3,6 +3,7 @@ plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.serialization") version "2.3.0"
     application
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "org.example"
@@ -53,4 +54,13 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("app")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    manifest {
+        attributes["Main-Class"] = "org.example.ApplicationKt"
+    }
 }
