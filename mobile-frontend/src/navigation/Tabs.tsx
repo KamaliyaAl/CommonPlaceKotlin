@@ -11,6 +11,8 @@ import ProfileScreen from "../screens/ProfileScreen";
 import UsersListScreen from "../screens/UsersListScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import FriendEventsScreen from "../screens/FriendEventsScreen";
+import EventDetailsScreen from "../screens/EventDetailsScreen";
+import ReviewScreen from "../screens/ReviewScreen";
 
 export type BottomTabParamList = {
     AddTab: undefined;
@@ -49,6 +51,8 @@ function UsersNavigator() {
             <UsersStack.Screen name="UsersList" component={UsersListScreen} />
             <UsersStack.Screen name="UserProfile" component={ProfileScreen} />
             <UsersStack.Screen name="FriendEvents" component={FriendEventsScreen} />
+            <UsersStack.Screen name="EventDetails" component={EventDetailsScreen} />
+            <UsersStack.Screen name="Reviews" component={ReviewScreen} />
         </UsersStack.Navigator>
     );
 }
@@ -57,8 +61,11 @@ function ProfileNavigator() {
     return (
         <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
             <ProfileStack.Screen name="MyProfile" component={ProfileScreen} />
+            <ProfileStack.Screen name="UserProfile" component={ProfileScreen} />
             <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />
             <ProfileStack.Screen name="FriendEvents" component={FriendEventsScreen} />
+            <ProfileStack.Screen name="EventDetails" component={EventDetailsScreen} />
+            <ProfileStack.Screen name="Reviews" component={ReviewScreen} />
         </ProfileStack.Navigator>
     );
 }
