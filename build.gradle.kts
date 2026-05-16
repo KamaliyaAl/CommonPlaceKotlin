@@ -1,7 +1,6 @@
-
 plugins {
-    kotlin("jvm") version "2.3.0"
-    kotlin("plugin.serialization") version "2.3.0"
+    kotlin("jvm") version "2.2.21"
+    kotlin("plugin.serialization") version "2.2.21"
     application
     id("com.gradleup.shadow") version "8.3.5"
 }
@@ -16,7 +15,8 @@ repositories {
 val ktorVersion = "3.1.1"
 
 dependencies {
-    // Ktor Server
+
+    // Ktor
     implementation("io.ktor:ktor-server-core:$ktorVersion")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
@@ -24,19 +24,21 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-default-headers:$ktorVersion")
+    implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
 
-    // Firebase Admin SDK
+    // Firebase
     implementation("com.google.firebase:firebase-admin:9.4.3")
 
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
-    // dotenv for reading .env.local
+    // Environment variables
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.0")
 
-    // Coroutines (for NotificationScheduler)
+    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
+    // Tests
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
@@ -60,6 +62,7 @@ tasks.shadowJar {
     archiveBaseName.set("app")
     archiveClassifier.set("")
     archiveVersion.set("")
+
     manifest {
         attributes["Main-Class"] = "org.example.ApplicationKt"
     }
